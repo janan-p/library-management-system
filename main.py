@@ -1,10 +1,12 @@
-print("hello by Janan")
+import sqlite3
 
-a = "Janan " 
+connection = None
+cursor = None
 
-print(a)
-print("I learnt how git works!!!!!!!")
+def connect(path):
+    pass
 
-x = 3
-y = 4
-print(total = x + y)
+
+def main():
+    global connection, cursor
+    
