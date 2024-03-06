@@ -13,3 +13,4 @@ Please add
 Please add
 
 # Names of anyone you have collaborated with (as much as it is allowed within the course policy) or a line saying that you did not collaborate with anyone else.  
+No collaboration with anyone but members of the group.
