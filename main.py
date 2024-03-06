@@ -36,7 +36,7 @@ def signup():
     insert_query = '''
         INSERT INTO members (email, passwd, name, byear, faculty) 
         VALUES (?, ?, ?, ?, ?)'''
-    # cursor.execute(insert_query, (email, pwd, name, byear, faculty))
+    cursor.execute(insert_query, (email, pwd, name, byear, faculty))
     print("Password Match! Account had been created.")
     connection.commit()
 
