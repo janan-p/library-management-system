@@ -21,7 +21,7 @@ def signup():
     print("\nTo sign up enter the following information:")
     email = input("Email: ")
 
-    cursor.execute('SELECT email FROM members WHERE email=?', (email,))
+    cursor.execute('SELECT email FROM members WHERE email=?', (email))
     if cursor.fetchone():
         print("This email is already registered. Try signing up with a new email.")
         return
@@ -83,8 +83,6 @@ def login_maybe():
         print("Invalid email or password.")
         return False 
     
-def insert_data():
-    pass
 
 def main_maybe(): 
 
