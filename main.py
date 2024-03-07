@@ -21,10 +21,14 @@ def signup():
     print("\nTo sign up enter the following information:")
     email = input("Email: ")
 
-    cursor.execute('SELECT email FROM members WHERE email=?', (email,))
-    if cursor.fetchone():
-        print("This email is already registered. Try signing up with a new email.")
-        return
+    has_email = True
+    while has_email:
+        cursor.execute('SELECT email FROM members WHERE email=?', (email,))
+        if cursor.fetchone():
+            print("This email is already registered. Try signing up with a new email.")
+            email = input("Email: ")
+        else:
+            has_email = False 
     
     name = input("Name: ")
     byear = input("Birth Year: ")
@@ -34,7 +38,6 @@ def signup():
 
     while pwd != pwd2:
         print("Password did not match.")
-        pwd = getpass.getpass("Password: ")
         pwd2 = getpass.getpass("Confirm Password: ")
 
     insert_query = '''
@@ -44,27 +47,9 @@ def signup():
     cursor.execute(insert_query, (email, pwd, name, byear, faculty))
     print("Password Match! Account had been created.")
     connection.commit()
+    return 
 
-def login(): #logs the user in or signs them up
-    global connection, cursor
-
-    option_choosen = True
-    user_id = ''
-    
-    while option_choosen == True: #maybe we can keep this part in the main?
-        user_option = input("\nDo you have an account? (Yes or no)\nIf you want to exit (exit).\n")
-
-        if user_option.lower() == "exit":#exiting the code
-            quit()
-        if user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
-            pass
-        elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
-            signup()
-            option_choosen = False
-        else:
-            print("\nInvalid input! Type either 'Yes' or 'No'\n")
-
-def login_maybe():
+def login():
 
     global connection, cursor
     print ("\nPlease enter your email and password.")
@@ -76,17 +61,14 @@ def login_maybe():
     user_data = cursor.fetchone()
 
     if user_data:
-        print("Login is successful. Welcome, ", user_data[2])
+        print(f'Login is successful. Welcome, {user_data[2]}')
         return True
     
     else:
         print("Invalid email or password.")
         return False 
     
-def insert_data():
-    pass
-
-def main_maybe(): 
+def main(): 
 
     global connection, cursor
     path = input("Enter the database file name: ")
@@ -104,7 +86,7 @@ def main_maybe():
             break
 
         elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
-            login_success = login_maybe()
+            login_success = login()
             if login_success:
                 #add whatever functions we want the user to perform after they login 
                 break
@@ -116,23 +98,8 @@ def main_maybe():
             print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
 
     connection.commit()
-    connection.close()     
-
-def main():
-    '''Main function to run the code'''
-
-
-    global connection, cursor
-    path = input("Enter the database file name: ")
-    path = './' + path
-
-    connect(path)
-    login()
-
-    connection.commit()
-    connection.close()
+    connection.close() 
     return
-    
 
 if __name__ == "__main__":
     main()
