@@ -57,7 +57,7 @@ def login():
     cursor.execute('SELECT * FROM members WHERE email=? AND passwd=?', (email, password))
     user_data = cursor.fetchone()
     if user_data:
-        print(f'Login is successful. Welcome, {user_data[2]}')
+        print(f'Login is successful. Welcome, {user_data[2]}!')
         return True
     
     else:
@@ -116,7 +116,7 @@ def main():
         print('[1]       Member Profile')
         print('[2]       Return a Book')
         print('[3]       Search for Book')
-        print('[4]       Pay a Penalty\n')
+        print('[4]       Pay a Penalty')
         print('[Exit]    To exit Menu')
         print('[Log out] Log out of user')
         user_task_choice = input('Choose a task (1,2,3,4,exit,log out): ')
@@ -133,7 +133,7 @@ def main():
             pay_a_penalty()
 
         elif user_task_choice.lower() == 'exit':
-            print('Goodbye! Have a good day!')
+            print('Goodbye, have a good day!')
             perform_task = False
 
         elif user_task_choice.lower() == 'log out':
