@@ -93,6 +93,7 @@ def main():
 
         elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
             signup()
+            option_choosen = False
 
         else:
             print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
