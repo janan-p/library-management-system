@@ -56,9 +56,10 @@ def login():
     password = getpass.getpass("Password: ")
     cursor.execute('SELECT * FROM members WHERE email=? AND passwd=?', (email, password))
     user_data = cursor.fetchone()
+    
     if user_data:
         print(f'Login is successful. Welcome, {user_data[2]}!')
-        return True
+        return email
     
     else:
         print("Invalid email or password.")
@@ -90,67 +91,68 @@ def main():
     path = './' + path
     connect(path)
     option_choosen = True
-    perform_task = False
-
+    
+    current_user = None 
+    
     while option_choosen == True: 
-        user_option = input("\nDo you have an account? (Yes or No)\nIf you want to exit (exit).\n")
+        if current_user == None:
+            user_option = input("\nDo you have an account? (Yes or No)\nIf you want to exit (exit).\n")
 
-        if user_option.lower() == "exit":#exiting the code
-            break
-
-        elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
-            login_success = login()
-            if login_success:
-                #add whatever functions we want the user to perform after they login 
-                perform_task = True
+            if user_option.lower() == "exit":#exiting the code
                 break
+
+            elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
+                login_success = login()
+                if login_success:
+                    #add whatever functions we want the user to perform after they login 
+                    current_user = login_success  #return email from login() function
+                    
+                else:
+                    print("Login unsuccessful. Try again or sign up.")
+                    continue 
             
+            elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
+                signup()
+                option_choosen = False
 
-        elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
-            signup()
-            perform_task = True
-            option_choosen = False
+            else:
+                print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
+                
+        else: # there is already a user logged in
+            print('\n----------------------------MENU---------------------------\n')
+            print('Tasks Available:')
+            print('[1]       Member Profile')
+            print('[2]       Return a Book')
+            print('[3]       Search for Book')
+            print('[4]       Pay a Penalty')
+            print('[Exit]    To exit Menu')
+            print('[Log out] Log out of user')
+            
+            user_task_choice = input('Choose a task (1,2,3,4,exit,log out): ')
+            
+            if user_task_choice == '1': #user chose member profile
+                member_profile()
 
-        else:
-            print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
-    
-    
-    #------------------------------------------------------------------------------------------------------------------------
-    while perform_task: #While loop to always ask the user for a task 
-        print('\n----------------------------MENU---------------------------\n')
-        print('Tasks Available:')
-        print('[1]       Member Profile')
-        print('[2]       Return a Book')
-        print('[3]       Search for Book')
-        print('[4]       Pay a Penalty')
-        print('[Exit]    To exit Menu')
-        print('[Log out] Log out of user')
-        user_task_choice = input('Choose a task (1,2,3,4,exit,log out): ')
-        if user_task_choice == '1': #user chose member profile
-            member_profile()
+            elif user_task_choice == '2': #user chose return a book
+                return_a_book()
 
-        elif user_task_choice == '2': #user chose return a book
-            return_a_book()
+            elif user_task_choice == '3': #user chose search a book
+                search_a_book()
 
-        elif user_task_choice == '3': #user chose search a book
-            search_a_book()
+            elif user_task_choice == '4': #user chose pay a penalty
+                pay_a_penalty()
 
-        elif user_task_choice == '4': #user chose pay a penalty
-            pay_a_penalty()
+            elif user_task_choice.lower() == 'log out':
+                current_user = None #no current user anymore, as logged out 
+                print("Session ended. You have been logged out.")
 
-        elif user_task_choice.lower() == 'exit':
-            print('Goodbye, have a good day!')
-            perform_task = False
-
-        elif user_task_choice.lower() == 'log out':
-            pass
-            #HOW DO WE LOG SOMEONE OUT???>?>>?>?>?
-            perform_task = False
-
-        else:
-            print('Invalid input! Please enter either (1,2,3,4,exit,log out)')
-
-
+            elif user_task_choice.lower() == 'exit':
+                print('Goodbye, have a good day!')
+                break 
+                
+            else:
+                print('Invalid input! Please enter either (1,2,3,4,exit,log out)')
+             
     connection.commit()
     connection.close() 
     return
