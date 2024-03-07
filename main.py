@@ -66,6 +66,12 @@ def login():
 #-----------------------------------------------------------------------------------------------------
         
 def member_profile():
+    # do we need the login to return the email so that we can use it here?
+    cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
+    member_info = cursor.fetchone() 
+    print(f"\nPersonal Information for {member_info[1]}:\n")
+    print(f"Email: {member_info[0]}")
+    print(f"Birth Year: {member_info[2]}")
     pass
 
 def return_a_book():
