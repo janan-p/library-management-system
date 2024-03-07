@@ -120,16 +120,16 @@ def main():
         print('[Exit]    To exit Menu')
         print('[Log out] Log out of user')
         user_task_choice = input('Choose a task (1,2,3,4,exit,log out): ')
-        if user_task_choice == 1: #user chose member profile
+        if user_task_choice == '1': #user chose member profile
             member_profile()
 
-        elif user_task_choice == 2: #user chose return a book
+        elif user_task_choice == '2': #user chose return a book
             return_a_book()
 
-        elif user_task_choice == 3: #user chose search a book
+        elif user_task_choice == '3': #user chose search a book
             search_a_book()
 
-        elif user_task_choice == 4: #user chose pay a penalty
+        elif user_task_choice == '4': #user chose pay a penalty
             pay_a_penalty()
 
         elif user_task_choice.lower() == 'exit':
