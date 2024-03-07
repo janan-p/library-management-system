@@ -67,7 +67,7 @@ def login():
 #-----------------------------------------------------------------------------------------------------
         
 def member_profile():
-    # do we need the login to return the email so that we can use it here?
+    # do we need the login to return the email so that we can use it here? maybe add it as a parameter
     cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
     member_info = cursor.fetchone() 
     print(f"\nPersonal Information for {member_info[1]}:\n")
@@ -113,7 +113,6 @@ def main():
             
             elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
                 signup()
-                option_choosen = False
 
             else:
                 print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
