@@ -62,8 +62,11 @@ def login():
         return email
     
     else:
-        print("Invalid email or password.")
+        print("Invalid email or password.") #We should add a \n at the start of this print statement
         return False 
+    
+    #Should we tell the user whether they got the email or password wrong?
+    #Do we need a connection.commit at the end?
 #-----------------------------------------------------------------------------------------------------
         
 def member_profile():
@@ -76,7 +79,31 @@ def member_profile():
     pass
 
 def return_a_book():
-    pass
+    # work in progress by Janan
+
+    global connection, cursor
+    # Find user's current borrowings (bid, bk title, borrowing date, return deadline for unreturned/overdue books)
+    borrowings_query = '''
+                        SELECT b.bid, bk.title, b.start_date, b.end_date
+                        FROM borrowings b, books bk
+                        WHERE b.book_id = bk.book_id
+                        AND b.member = ?
+                       '''
+    cursor.execute(borrowings_query, (email))
+    user_borrowings = cursor.fetchall()
+    for borrowing in user_borrowings:
+        bid = borrowing[0]
+        title = borrowing[1]
+        borrow_date = borrowing[2]
+        
+        if borrowing[3] == None: # !! Check how NULL from SQL is returned to Python !!
+            borrow_date_formatted = borrow_date.split("-")
+
+            if borrow_date_formatted[1] == "01" or borrow_date_formatted[1] == "03" or borrow_date_formatted[1] == "05"
+
+            int(borrow_date_formatted[2])
+    pass 
+        
 
 def search_a_book():
     pass
