@@ -82,29 +82,66 @@ def member_profile(email):
 
 def return_a_book(email):
     # work in progress by Janan
-
     global connection, cursor
-    # Find user's current borrowings (bid, bk title, borrowing date, return deadline for unreturned/overdue books)
-    borrowings_query = '''
-                        SELECT b.bid, bk.title, b.start_date, b.end_date
-                        FROM borrowings b, books bk
-                        WHERE b.book_id = bk.book_id
-                        AND b.member = ?
-                       '''
-    cursor.execute(borrowings_query, (email))
-    user_borrowings = cursor.fetchall()
-    for borrowing in user_borrowings:
-        bid = borrowing[0]
-        title = borrowing[1]
-        borrow_date = borrowing[2]
-        
-        if borrowing[3] == None: # !! Check how NULL from SQL is returned to Python !!
-            borrow_date_formatted = borrow_date.split("-")
 
-            if borrow_date_formatted[1] == "01" or borrow_date_formatted[1] == "03" or borrow_date_formatted[1] == "05":
-                pass
-            int(borrow_date_formatted[2])
-    pass 
+    # Borrowing info for books already returned that weren't overdue
+    borrowings_query_returned_books = '''
+                                      SELECT b.bid AS "Borrowing ID", 
+                                             bk.title AS "Book Title",
+                                             b.start_date AS "Borrowing Date"
+                                      FROM borrowings b, books bk
+                                      WHERE b.book_id = bk.book_id
+                                      AND b.member = ?
+                                      AND b.end_date != NULL
+                                      AND (JULIANDAY(b.end_date) - JULIANDAY(b.start_date) <= 20)
+                                      '''
+    # Borrowing info for books that haven't been returned or were returned late
+    borrowings_query_unreturned_books = '''
+                                        SELECT b.bid AS "Borrowing ID", 
+                                               bk.title AS "Book Title", 
+                                               b.start_date AS "Borrowing Date", 
+                                               DATE(julianday(b.start_date) + 20) AS "Deadline"
+                                        FROM borrowings b, books bk
+                                        WHERE b.book_id = bk.book_id
+                                        AND b.member = ?
+                                        AND (b.end_date = NULL
+                                        OR (JULIANDAY(b.end_date) - JULIANDAY(b.start_date) > 20))
+                                        '''
+    cursor.execute(borrowings_query_returned_books, (email))
+    user_returned_borrowings = cursor.fetchall()
+    cursor.execute(borrowings_query_unreturned_books, (email))
+    user_unreturned_borrowings = cursor.fetchall()
+    
+    print("%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
+    # Print out borrowing info for returned and not overdue books
+    for borrowing1 in user_returned_borrowings:
+        bid = borrowing1[0]
+        title = borrowing1[1]
+        borrow_date = borrowing1[2]
+        print("%-16s %-16s %-16s" % (bid, title, borrow_date))
+    # Print out borrowing info for for unreturned books or were returned late
+    for borrowing2 in user_unreturned_borrowings:
+        bid = borrowing2[0]
+        title = borrowing2[1]
+        borrow_date = borrowing2[2]
+        deadline = borrowing2[3]
+        print("%-16s %-16s %-16s %-16s" % (bid, title, borrow_date, deadline))
+
+    # Execute returning procedure
+    print("\nPlease choose a book to return.")
+    return_id = input("Borrowing ID: ")
+
+    '''
+    TO DO: 
+    - Enter today's date as return date in database
+    - For unreturned/overdue borrowings, apply penalty and update in database
+    - Give option to write a review (review text and rating)
+    - Fill other fields of review record
+        - Review ID
+        - Review date = current date and time
+        - Review member = User
+    '''
+    pass
         
 
 def search_a_book(): #Search for a book
