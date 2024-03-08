@@ -65,11 +65,13 @@ def login():
         print("Invalid email or password.") #We should add a \n at the start of this print statement
         return False 
     
+    #connection.commit()
+
     #Should we tell the user whether they got the email or password wrong?
     #Do we need a connection.commit at the end?
 #-----------------------------------------------------------------------------------------------------
         
-def member_profile():
+def member_profile(email):
     # do we need the login to return the email so that we can use it here? maybe add it as a parameter
     cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
     member_info = cursor.fetchone() 
@@ -78,7 +80,7 @@ def member_profile():
     print(f"Birth Year: {member_info[2]}")
     pass
 
-def return_a_book():
+def return_a_book(email):
     # work in progress by Janan
 
     global connection, cursor
@@ -99,14 +101,20 @@ def return_a_book():
         if borrowing[3] == None: # !! Check how NULL from SQL is returned to Python !!
             borrow_date_formatted = borrow_date.split("-")
 
-            if borrow_date_formatted[1] == "01" or borrow_date_formatted[1] == "03" or borrow_date_formatted[1] == "05"
-
+            if borrow_date_formatted[1] == "01" or borrow_date_formatted[1] == "03" or borrow_date_formatted[1] == "05":
+                pass
             int(borrow_date_formatted[2])
     pass 
         
 
-def search_a_book():
-    pass
+def search_a_book(): #Search for a book
+    global connection, cursor
+
+    user_keyword = input("Enter a key word to search for: ")#Main keyword we will use
+    search_query = '''
+                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, AVG(r.rating)
+                    FROM books bk, reviews r, borrowings b
+                    WHERE bk.book_id LIKE ? OR bk.author LIKE ?'''#How do we check if the book is available?
 
 def pay_a_penalty():
     pass
@@ -117,13 +125,14 @@ def main():
     path = input("Enter the database file name: ")
     path = './' + path
     connect(path)
+
     option_choosen = True
     
     current_user = None 
     
-    while option_choosen == True: 
+    while option_choosen: 
         if current_user == None:
-            user_option = input("\nDo you have an account? (Yes or No)\nIf you want to exit (exit).\n")
+            user_option = input("\nDo you have an account? (Yes or No)\nIf you want to exit (exit): ")
 
             if user_option.lower() == "exit":#exiting the code
                 break
@@ -157,10 +166,10 @@ def main():
             user_task_choice = input('Choose a task (1,2,3,4,exit,log out): ')
             
             if user_task_choice == '1': #user chose member profile
-                member_profile()
+                member_profile(current_user)
 
             elif user_task_choice == '2': #user chose return a book
-                return_a_book()
+                return_a_book(current_user)
 
             elif user_task_choice == '3': #user chose search a book
                 search_a_book()
