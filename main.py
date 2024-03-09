@@ -42,8 +42,15 @@ def signup():
     
     cursor.execute(insert_query, (email, pwd, name, byear, faculty))
     print("Password Match! Account had been created.")
+
+    cursor.execute('SELECT * FROM members WHERE email=? AND passwd=?', (email, pwd))
+    user_data = cursor.fetchone()
     connection.commit()
-    return 
+    if user_data:
+        print(f"Sign up successful. Welcome, {user_data[2]}!")
+        return email
+    else:
+        return False 
 
 def login():
     '''
@@ -56,7 +63,8 @@ def login():
     password = getpass.getpass("Password: ")
     cursor.execute('SELECT * FROM members WHERE email=? AND passwd=?', (email, password))
     user_data = cursor.fetchone()
-    
+    connection.commit()
+
     if user_data:
         print(f'Login is successful. Welcome, {user_data[2]}!')
         return email
@@ -65,10 +73,6 @@ def login():
         print("Invalid email or password.") #We should add a \n at the start of this print statement
         return False 
     
-    #connection.commit()
-
-    #Should we tell the user whether they got the email or password wrong?
-    #Do we need a connection.commit at the end?
 #-----------------------------------------------------------------------------------------------------
         
 def member_profile(email):
@@ -185,8 +189,9 @@ def main():
                     continue 
             
             elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
-                signup()
-
+                signup_success = signup()
+                if signup_success:
+                    current_user = signup_success
             else:
                 print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
                 
