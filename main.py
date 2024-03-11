@@ -42,8 +42,16 @@ def signup():
     
     cursor.execute(insert_query, (email, pwd, name, byear, faculty))
     print("Password Match! Account had been created.")
+
+    cursor.execute('SELECT * FROM members WHERE email=? AND passwd=?', (email, pwd))
+    user_data = cursor.fetchone()
     connection.commit()
-    return 
+
+    if user_data:
+        print(f"Sign up successful. Welcome, {user_data[2]}!")
+        return email
+    else:
+        return False  
 
 def login():
     '''
@@ -56,6 +64,7 @@ def login():
     password = getpass.getpass("Password: ")
     cursor.execute('SELECT * FROM members WHERE email=? AND passwd=?', (email, password))
     user_data = cursor.fetchone()
+    
     if user_data:
         print(f'Login is successful. Welcome, {user_data[2]}!')
         return True
@@ -65,20 +74,152 @@ def login():
         return False 
 #-----------------------------------------------------------------------------------------------------
         
-def member_profile():
-    # do we need the login to return the email so that we can use it here?
+def member_profile(email):
+    # do we need the login to return the email so that we can use it here? maybe add it as a parameter
+    #Personal information (such as name, email and birth year).
+    #The number of the books they have borrowed and returned (shown as previous borrowings), the current borrowings which is the number of their unreturned borrowings, and overdue borrowings, which is the number of their current borrowings that are not returned within the deadline. The return deadline is 20 days after the borrowing date.
+    #Penalty information, displaying the number of unpaid penalties (any penalty that is not paid in full), and the user's total debt amount on unpaid penalties.
+
     cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
     member_info = cursor.fetchone() 
     print(f"\nPersonal Information for {member_info[1]}:\n")
     print(f"Email: {member_info[0]}")
     print(f"Birth Year: {member_info[2]}")
+
+    print(f"Borrowings/Returns:")
+    cursor.execute(''' 
+                    SELECT COUNT(*)  
+                    FROM borrowings 
+                    WHERE member = ? 
+                    AND end_date IS NOT NULL; 
+                    ''', (email,))
+    
+    user_previous_borrowings = cursor.fetchone()[0]
+    print(f"Previous borrowings: {user_previous_borrowings} ")
+
+    cursor.execute(''' 
+                    SELECT COUNT(*)  
+                    FROM borrowings 
+                    WHERE member = ? 
+                    AND end_date IS NULL; 
+                    ''', (email,))
+    
+    user_current_borrowings = cursor.fetchone()[0]
+    print(f"Current borrowings: {user_current_borrowings} ")
+
+    cursor.execute(''' 
+                    SELECT COUNT(*)  
+                    FROM borrowings 
+                    WHERE member = ? 
+                    AND end_date IS NULL
+                    AND (JULIANDAY(end_date) - JULIANDAY(start_date) > 20); 
+                    ''', (email,))
+    
+    user_overdue_borrowings = cursor.fetchone()[0]
+    print(f"Overdue borrowings: {user_overdue_borrowings} ")
+
+    print(f"Penalties:")
+    cursor.execute(''' 
+                    SELECT COUNT(*)  
+                    FROM penalties p 
+                    JOIN borrowings b ON p.bid = b.bid
+                    WHERE b.member = ? 
+                    AND p.amount > p.paid_amount; 
+                    ''', (email,))
+    
+    user_unpaid_penalties = cursor.fetchone()[0]
+    print(f"Unpaid penalties: {user_unpaid_penalties} ")
+
+    cursor.execute(''' 
+                    SELECT SUM(p.amount - p.paid_amount)  
+                    FROM penalties p 
+                    JOIN borrowings b ON p.bid = b.bid
+                    WHERE b.member = ? 
+                    AND p.amount > p.paid_amount; 
+                    ''', (email,))
+    
+    user_total_debt = cursor.fetchone()[0]
+    print(f"Total debt on unpaid penalties: {user_total_debt} ")
+
     pass
 
 def return_a_book():
+    # work in progress by Janan
+    global connection, cursor
+
+    # Borrowing info for books already returned that weren't overdue
+    borrowings_query_returned_books = '''
+                                      SELECT b.bid AS "Borrowing ID", 
+                                             bk.title AS "Book Title",
+                                             b.start_date AS "Borrowing Date"
+                                      FROM borrowings b, books bk
+                                      WHERE b.book_id = bk.book_id
+                                      AND b.member = ?
+                                      AND b.end_date != NULL
+                                      AND (JULIANDAY(b.end_date) - JULIANDAY(b.start_date) <= 20)
+                                      '''
+    # Borrowing info for books that haven't been returned or were returned late
+    borrowings_query_unreturned_books = '''
+                                        SELECT b.bid AS "Borrowing ID", 
+                                               bk.title AS "Book Title", 
+                                               b.start_date AS "Borrowing Date", 
+                                               DATE(julianday(b.start_date) + 20) AS "Deadline"
+                                        FROM borrowings b, books bk
+                                        WHERE b.book_id = bk.book_id
+                                        AND b.member = ?
+                                        AND (b.end_date = NULL
+                                        OR (JULIANDAY(b.end_date) - JULIANDAY(b.start_date) > 20))
+                                        '''
+    cursor.execute(borrowings_query_returned_books, (email))
+    user_returned_borrowings = cursor.fetchall()
+    cursor.execute(borrowings_query_unreturned_books, (email))
+    user_unreturned_borrowings = cursor.fetchall()
+    
+    print("%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
+
+    # Print out borrowing info for returned and not overdue books
+    for borrowing1 in user_returned_borrowings:
+        bid = borrowing1[0]
+        title = borrowing1[1]
+        borrow_date = borrowing1[2]
+        print("%-16s %-16s %-16s" % (bid, title, borrow_date))
+
+    # Print out borrowing info for for unreturned books or were returned late
+    for borrowing2 in user_unreturned_borrowings:
+        bid = borrowing2[0]
+        title = borrowing2[1]
+        borrow_date = borrowing2[2]
+        deadline = borrowing2[3]
+        print("%-16s %-16s %-16s %-16s" % (bid, title, borrow_date, deadline))
+
+    # Execute returning procedure
+    print("\nPlease choose a book to return.")
+    return_id = input("Borrowing ID: ")
+
+    '''
+    TO DO: 
+    - Enter today's date as return date in database
+    - For unreturned/overdue borrowings, apply penalty and update in database
+    - Give option to write a review (review text and rating)
+    - Fill other fields of review record
+        - Review ID
+        - Review date = current date and time
+        - Review member = User
+    '''
     pass
 
 def search_a_book():
+    global connection, cursor
+
+    user_keyword = input("Enter a key word to search for: ")#Main keyword we will use
+    
+    search_query = '''
+                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, AVG(r.rating)
+                    FROM books bk, reviews r, borrowings b
+                    WHERE bk.book_id LIKE ? OR bk.author LIKE ?'''#How do we check if the book is available?
+
     pass
+
 
 def pay_a_penalty():
     pass
@@ -89,68 +230,70 @@ def main():
     path = input("Enter the database file name: ")
     path = './' + path
     connect(path)
+
     option_choosen = True
-    perform_task = False
+    
+    current_user = None 
+    
+    while option_choosen: 
+        if current_user == None:
+            user_option = input("\nDo you have an account? (Yes or No)\nIf you want to exit (exit): ")
 
-    while option_choosen == True: 
-        user_option = input("\nDo you have an account? (Yes or No)\nIf you want to exit (exit).\n")
-
-        if user_option.lower() == "exit":#exiting the code
-            break
-
-        elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
-            login_success = login()
-            if login_success:
-                #add whatever functions we want the user to perform after they login 
-                perform_task = True
+            if user_option.lower() == "exit":#exiting the code
                 break
+
+            elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
+                login_success = login()
+                if login_success:
+                    #add whatever functions we want the user to perform after they login 
+                    current_user = login_success  #return email from login() function
+                    
+                else:
+                    print("Login unsuccessful. Try again or sign up.")
+                    continue 
             
+            elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
+                signup_success = signup()
+                if signup_success:
+                    current_user = signup_success
+            else:
+                print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
+                
+        else: # there is already a user logged in
+            print('\n----------------------------MENU---------------------------\n')
+            print('Tasks Available:')
+            print('[1]       Member Profile')
+            print('[2]       Return a Book')
+            print('[3]       Search for Book')
+            print('[4]       Pay a Penalty')
+            print('[Exit]    To exit Menu')
+            print('[Log out] Log out of user')
+            
+            user_task_choice = input('Choose a task (1,2,3,4,exit,log out): ')
+            
+            if user_task_choice == '1': #user chose member profile
+                member_profile(current_user)
 
-        elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
-            signup()
-            perform_task = True
-            option_choosen = False
+            elif user_task_choice == '2': #user chose return a book
+                return_a_book(current_user)
 
-        else:
-            print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
-    
-    
-    #------------------------------------------------------------------------------------------------------------------------
-    while perform_task: #While loop to always ask the user for a task 
-        print('\n----------------------------MENU---------------------------\n')
-        print('Tasks Available:')
-        print('[1]       Member Profile')
-        print('[2]       Return a Book')
-        print('[3]       Search for Book')
-        print('[4]       Pay a Penalty')
-        print('[Exit]    To exit Menu')
-        print('[Log out] Log out of user')
-        user_task_choice = input('Choose a task (1,2,3,4,exit,log out): ')
-        if user_task_choice == '1': #user chose member profile
-            member_profile()
+            elif user_task_choice == '3': #user chose search a book
+                search_a_book()
 
-        elif user_task_choice == '2': #user chose return a book
-            return_a_book()
+            elif user_task_choice == '4': #user chose pay a penalty
+                pay_a_penalty()
 
-        elif user_task_choice == '3': #user chose search a book
-            search_a_book()
+            elif user_task_choice.lower() == 'log out':
+                current_user = None #no current user anymore, as logged out 
+                print("Session ended. You have been logged out.")
 
-        elif user_task_choice == '4': #user chose pay a penalty
-            pay_a_penalty()
-
-        elif user_task_choice.lower() == 'exit':
-            print('Goodbye, have a good day!')
-            perform_task = False
-
-        elif user_task_choice.lower() == 'log out':
-            pass
-            #HOW DO WE LOG SOMEONE OUT???>?>>?>?>?
-            perform_task = False
-
-        else:
-            print('Invalid input! Please enter either (1,2,3,4,exit,log out)')
-
-
+            elif user_task_choice.lower() == 'exit':
+                print('Goodbye, have a good day!')
+                break 
+                
+            else:
+                print('Invalid input! Please enter either (1,2,3,4,exit,log out)')
+             
     connection.commit()
     connection.close() 
     return
