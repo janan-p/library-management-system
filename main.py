@@ -195,18 +195,8 @@ def return_a_book(email):
     print("\nPlease choose a book to return.")
     return_id = input("Borrowing ID: ")
 
-    '''
-    TO DO: 
-    - Enter today's date as return date in database
-    - For unreturned/overdue borrowings, apply penalty and update in database
-    - Give option to write a review (review text and rating)
-    - Fill other fields of review record
-        - Review ID
-        - Review date = current date and time
-        - Review member = User
-    '''
-    pass
-        
+    # Enter today's date as return date in database
+    cursor.execute('UPDATE borrowings SET end_date = JULIANDAY("now") WHERE bid = ?', return_id)
 
 def search_a_book(): #Search for a book
     global connection, cursor
