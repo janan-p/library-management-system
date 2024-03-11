@@ -198,6 +198,12 @@ def return_a_book(email):
     # Enter today's date as return date in database
     cursor.execute('UPDATE borrowings SET end_date = JULIANDAY("now") WHERE bid = ?', return_id)
 
+    # For overdue borrowings, apply penalty and update in database
+    cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', return_id)
+    returned_book = cursor.fetchone()
+    penalty = returned_book[2] - 20
+    cursor.execute('UPDATE penalties SET amount = :penalty WHERE bid = :return_id', {"penalty":penalty, "return_id":return_id})
+
 def search_a_book(): #Search for a book
     global connection, cursor
 
