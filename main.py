@@ -77,11 +77,71 @@ def login():
         
 def member_profile(email):
     # do we need the login to return the email so that we can use it here? maybe add it as a parameter
+    #Personal information (such as name, email and birth year).
+    #The number of the books they have borrowed and returned (shown as previous borrowings), the current borrowings which is the number of their unreturned borrowings, and overdue borrowings, which is the number of their current borrowings that are not returned within the deadline. The return deadline is 20 days after the borrowing date.
+    #Penalty information, displaying the number of unpaid penalties (any penalty that is not paid in full), and the user's total debt amount on unpaid penalties.
+
     cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
     member_info = cursor.fetchone() 
     print(f"\nPersonal Information for {member_info[1]}:\n")
     print(f"Email: {member_info[0]}")
     print(f"Birth Year: {member_info[2]}")
+
+    print(f"Borrowings/Returns:")
+    cursor.execute(''' 
+                    SELECT COUNT(*)  
+                    FROM borrowings 
+                    WHERE member = ? 
+                    AND end_date IS NOT NULL; 
+                    ''', (email,))
+    
+    user_previous_borrowings = cursor.fetchone()[0]
+    print(f"Previous borrowings: {user_previous_borrowings} ")
+
+    cursor.execute(''' 
+                    SELECT COUNT(*)  
+                    FROM borrowings 
+                    WHERE member = ? 
+                    AND end_date IS NULL; 
+                    ''', (email,))
+    
+    user_current_borrowings = cursor.fetchone()[0]
+    print(f"Current borrowings: {user_current_borrowings} ")
+
+    cursor.execute(''' 
+                    SELECT COUNT(*)  
+                    FROM borrowings 
+                    WHERE member = ? 
+                    AND end_date IS NULL
+                    AND (JULIANDAY(end_date) - JULIANDAY(start_date) > 20); 
+                    ''', (email,))
+    
+    user_overdue_borrowings = cursor.fetchone()[0]
+    print(f"Overdue borrowings: {user_overdue_borrowings} ")
+
+    print(f"Penalties:")
+    cursor.execute(''' 
+                    SELECT COUNT(*)  
+                    FROM penalties p 
+                    JOIN borrowings b ON p.bid = b.bid
+                    WHERE b.member = ? 
+                    AND p.amount > p.paid_amount; 
+                    ''', (email,))
+    
+    user_unpaid_penalties = cursor.fetchone()[0]
+    print(f"Unpaid penalties: {user_unpaid_penalties} ")
+
+    cursor.execute(''' 
+                    SELECT SUM(p.amount - p.paid_amount)  
+                    FROM penalties p 
+                    JOIN borrowings b ON p.bid = b.bid
+                    WHERE b.member = ? 
+                    AND p.amount > p.paid_amount; 
+                    ''', (email,))
+    
+    user_total_debt = cursor.fetchone()[0]
+    print(f"Total debt on unpaid penalties: {user_total_debt} ")
+
     pass
 
 def return_a_book(email):
