@@ -46,12 +46,11 @@ def signup():
     cursor.execute('SELECT * FROM members WHERE email=? AND passwd=?', (email, pwd))
     user_data = cursor.fetchone()
     connection.commit()
-
     if user_data:
         print(f"Sign up successful. Welcome, {user_data[2]}!")
         return email
     else:
-        return False  
+        return False 
 
 def login():
     '''
@@ -64,14 +63,16 @@ def login():
     password = getpass.getpass("Password: ")
     cursor.execute('SELECT * FROM members WHERE email=? AND passwd=?', (email, password))
     user_data = cursor.fetchone()
-    
+    connection.commit()
+
     if user_data:
         print(f'Login is successful. Welcome, {user_data[2]}!')
-        return True
+        return email
     
     else:
-        print("Invalid email or password.")
+        print("Invalid email or password.") #We should add a \n at the start of this print statement
         return False 
+    
 #-----------------------------------------------------------------------------------------------------
         
 def member_profile(email):
@@ -143,7 +144,7 @@ def member_profile(email):
 
     pass
 
-def return_a_book():
+def return_a_book(email):
     # work in progress by Janan
     global connection, cursor
 
@@ -176,14 +177,12 @@ def return_a_book():
     user_unreturned_borrowings = cursor.fetchall()
     
     print("%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
-
     # Print out borrowing info for returned and not overdue books
     for borrowing1 in user_returned_borrowings:
         bid = borrowing1[0]
         title = borrowing1[1]
         borrow_date = borrowing1[2]
         print("%-16s %-16s %-16s" % (bid, title, borrow_date))
-
     # Print out borrowing info for for unreturned books or were returned late
     for borrowing2 in user_unreturned_borrowings:
         bid = borrowing2[0]
@@ -207,19 +206,16 @@ def return_a_book():
         - Review member = User
     '''
     pass
+        
 
-def search_a_book():
+def search_a_book(): #Search for a book
     global connection, cursor
 
     user_keyword = input("Enter a key word to search for: ")#Main keyword we will use
-    
     search_query = '''
                     SELECT bk.book_id, bk.title, bk.author, bk.pyear, AVG(r.rating)
                     FROM books bk, reviews r, borrowings b
                     WHERE bk.book_id LIKE ? OR bk.author LIKE ?'''#How do we check if the book is available?
-
-    pass
-
 
 def pay_a_penalty():
     pass
