@@ -237,8 +237,23 @@ def search_a_book(): #Search for a book
                     FROM books bk, reviews r, borrowings b
                     WHERE bk.book_id LIKE ? OR bk.author LIKE ?'''#How do we check if the book is available?
 
-def pay_a_penalty():
-    pass
+def pay_a_penalty(email):
+        # The system should show a list of unpaid penalties (any penalty that is not paid in full) of the user. 
+    # The user should be able to select a penalty and pay it partially or in full.
+    global connection, cursor
+
+    # Find the user's penalties
+    penalty_query = '''
+                    SELECT p.pid, p.amount, p.paid_amount 
+                    FROM penalties p, borrowings b 
+                    WHERE b.member = ?
+                    AND b.bid = p.bid
+                    '''
+    cursor.execute(penalty_query, email)
+    penalties = cursor.fetchall()
+
+    
+    connection.commit()
 
 #--------------------------------------------------------------------------------------------------------
 def main(): 
