@@ -147,83 +147,88 @@ def member_profile(email):
 def return_a_book(email):
     global connection, cursor
 
-    # Borrowing info for books already returned that weren't overdue
-    borrowings_query_returned_books = '''
-                                      SELECT b.bid AS "Borrowing ID", 
-                                             bk.title AS "Book Title",
-                                             b.start_date AS "Borrowing Date"
-                                      FROM borrowings b, books bk
-                                      WHERE b.book_id = bk.book_id
-                                      AND b.member = ?
-                                      AND b.end_date != NULL
-                                      AND (JULIANDAY(b.end_date) - JULIANDAY(b.start_date) <= 20)
-                                      '''
-    # Borrowing info for books that haven't been returned or were returned late
+    # Borrowing info for books that haven't been returned (including overdues)
     borrowings_query_unreturned_books = '''
                                         SELECT b.bid AS "Borrowing ID", 
                                                bk.title AS "Book Title", 
                                                b.start_date AS "Borrowing Date", 
                                                DATE(julianday(b.start_date) + 20) AS "Deadline"
                                         FROM borrowings b, books bk
-                                        WHERE b.book_id = bk.book_id
+                                        WHERE b.end_date IS NULL
+                                        AND b.book_id = bk.book_id
                                         AND b.member = ?
-                                        AND (b.end_date = NULL
-                                        OR (JULIANDAY(b.end_date) - JULIANDAY(b.start_date) > 20))
                                         '''
-    cursor.execute(borrowings_query_returned_books, (email,))
-    user_returned_borrowings = cursor.fetchall()
+
     cursor.execute(borrowings_query_unreturned_books, (email,))
-    user_unreturned_borrowings = cursor.fetchall()
-    
-    print("%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
-    # Print out borrowing info for returned and not overdue books
-    for borrowing1 in user_returned_borrowings:
-        bid = borrowing1[0]
-        title = borrowing1[1]
-        borrow_date = borrowing1[2]
-        print("%-16s %-16s %-16s" % (bid, title, borrow_date))
-    # Print out borrowing info for for unreturned books or were returned late
-    for borrowing2 in user_unreturned_borrowings:
-        bid = borrowing2[0]
-        title = borrowing2[1]
-        borrow_date = borrowing2[2]
-        deadline = borrowing2[3]
-        print("%-16s %-16s %-16s %-16s" % (bid, title, borrow_date, deadline))
+    user_borrowings = cursor.fetchall()
 
-    # Execute returning procedure
-    print("\nPlease choose a book to return.")
-    return_id = input("Borrowing ID: ")
+    if not user_borrowings:
+        print("\nYou do not have any borrowings!")
+    else:
+        print("%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
+        # Print out borrowing info for unreturned books
+        for borrowing in user_borrowings:
+            bid = borrowing[0]
+            title = borrowing[1]
+            borrow_date = borrowing[2]
+            deadline = borrowing[3]
+            print("%-16s %-16s %-16s %-16s" % (bid, title, borrow_date, deadline))
 
-    # Enter today's date as return date in database
-    cursor.execute('UPDATE borrowings SET end_date = JULIANDAY("now") WHERE bid = ?', return_id)
+        # Check if the return_id chosen by the user is valid
+        print("\nPlease choose a book to return.")
+        return_id = input("Borrowing ID: ")
 
-    # For overdue borrowings, apply penalty and update in database
-    cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', return_id,)
-    returned_book = cursor.fetchone()
-    penalty = returned_book[2] - 20
-    cursor.execute('UPDATE penalties SET amount = :penalty WHERE bid = :return_id', {"penalty":penalty, "return_id":return_id})
+        found = False
+        while not found:
+            for borrowing2 in user_borrowings:
+                if int(borrowing2[0]) == int(return_id):
+                    found = True
+                    break
+            if not found:
+                print("\nPlease enter a valid BID to return.")
+                return_id = input("Borrowing ID: ")
 
-    # Optional review
-    review_option = input("\nWould you like to write a review? (Yes or No) ")
-    if review_option.lower() == "yes" or review_option.lower() == "y":
-        review_text = input("\nWhat is your review for this book? \n")
-        review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
+        # Enter today's date as return date in database
+        cursor.execute('UPDATE borrowings SET end_date = JULIANDAY("now") WHERE bid = ?', (return_id,))
 
-        # Find last rid number
-        cursor.execute('SELECT rid FROM reviews ORDER BY rid DESC LIMIT 1')
-        last_rid = cursor.fetchone()
+        print("\nYour book is successfully returned!")
 
-        # Get value of book_id for the current borrowing
-        cursor.execute('SELECT book_id FROM borrowings WHERE bid = ?', return_id,)
-        book_id = cursor.fetchone()
+        '''
         
-        # Add user's review into review table
-        review_query = '''
-                       INSERT INTO reviews VALUES(:rid, :book_id, :member, :rating, :rtext, JULIANDAY("now")) 
-                       '''
-        cursor.execute(review_query, {"rid":last_rid[0] + 1, "book_id":book_id[0], "member":email, "rating":review_rating, "rtext":review_text})
-    elif review_option.lower() != "no" or review_option.lower() != "n":
-        print("Invalid input! Type either 'yes' or 'no'")
+        Do we want to add a section that tells the user that they returned a book late and a penalty was applied?
+        
+        '''
+
+        # For overdue borrowings, apply penalty and update in database
+        cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', return_id,)
+        returned_book = cursor.fetchone()
+        penalty = returned_book[2] - 20
+        cursor.execute('UPDATE penalties SET amount = :penalty WHERE bid = :return_id', {"penalty":penalty, "return_id":return_id})
+
+        # Optional review
+        review_option = input("\nWould you like to write a review? (Yes or No) ")
+        if review_option.lower() == "yes" or review_option.lower() == "y":
+            review_text = input("\nWhat is your review for this book? \n")
+            review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
+            while int(review_rating) < 1 or int(review_rating) > 5:
+                print("\nPlease enter a number between 1 to 5 inclusive.")
+                review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
+
+            # Find last rid number
+            cursor.execute('SELECT rid FROM reviews ORDER BY rid DESC LIMIT 1')
+            last_rid = cursor.fetchone()
+
+            # Get value of book_id for the current borrowing
+            cursor.execute('SELECT book_id FROM borrowings WHERE bid = ?', (return_id,))
+            book_id = cursor.fetchone()
+            
+            # Add user's review into review table
+            review_query = '''
+                        INSERT INTO reviews VALUES(:rid, :book_id, :member, :rating, :rtext, JULIANDAY("now")) 
+                        '''
+            cursor.execute(review_query, {"rid":last_rid[0] + 1, "book_id":book_id[0], "member":email, "rating":review_rating, "rtext":review_text})
+        elif review_option.lower() != "no" or review_option.lower() != "n":
+            print("Invalid input! Type either 'yes' or 'no'")
     
     connection.commit()
 
