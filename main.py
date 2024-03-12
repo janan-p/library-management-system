@@ -158,7 +158,6 @@ def return_a_book(email):
                                         AND b.book_id = bk.book_id
                                         AND b.member = ?
                                         '''
-
     cursor.execute(borrowings_query_unreturned_books, (email,))
     user_borrowings = cursor.fetchall()
 
@@ -200,13 +199,16 @@ def return_a_book(email):
         '''
 
         # For overdue borrowings, apply penalty and update in database
-        cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', return_id,)
+        cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', (return_id,))
         returned_book = cursor.fetchone()
         penalty = returned_book[2] - 20
         cursor.execute('UPDATE penalties SET amount = :penalty WHERE bid = :return_id', {"penalty":penalty, "return_id":return_id})
 
         # Optional review
-        review_option = input("\nWould you like to write a review? (Yes or No) ")
+        review_option = input("\nWould you like to write a review? (Yes or No): ")
+        while review_option.lower() != "yes" and review_option.lower() != "y" and review_option.lower() != "no" and review_option.lower() != "n":
+            review_option = input("\nInvalid input! Type either 'yes' or 'no': ")
+
         if review_option.lower() == "yes" or review_option.lower() == "y":
             review_text = input("\nWhat is your review for this book? \n")
             review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
@@ -227,8 +229,6 @@ def return_a_book(email):
                         INSERT INTO reviews VALUES(:rid, :book_id, :member, :rating, :rtext, JULIANDAY("now")) 
                         '''
             cursor.execute(review_query, {"rid":last_rid[0] + 1, "book_id":book_id[0], "member":email, "rating":review_rating, "rtext":review_text})
-        elif review_option.lower() != "no" or review_option.lower() != "n":
-            print("Invalid input! Type either 'yes' or 'no'")
     
     connection.commit()
 
