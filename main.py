@@ -145,7 +145,6 @@ def member_profile(email):
     pass
 
 def return_a_book(email):
-    # work in progress by Janan
     global connection, cursor
 
     # Borrowing info for books already returned that weren't overdue
@@ -164,16 +163,16 @@ def return_a_book(email):
                                         SELECT b.bid AS "Borrowing ID", 
                                                bk.title AS "Book Title", 
                                                b.start_date AS "Borrowing Date", 
-                                               DATE(julianday(b.start_date) + 20) AS "Deadline"
+                                               DATE(JULIANDAY(b.start_date) + 20) AS "Deadline"
                                         FROM borrowings b, books bk
                                         WHERE b.book_id = bk.book_id
                                         AND b.member = ?
                                         AND (b.end_date = NULL
                                         OR (JULIANDAY(b.end_date) - JULIANDAY(b.start_date) > 20))
                                         '''
-    cursor.execute(borrowings_query_returned_books, (email))
+    cursor.execute(borrowings_query_returned_books, (email,))
     user_returned_borrowings = cursor.fetchall()
-    cursor.execute(borrowings_query_unreturned_books, (email))
+    cursor.execute(borrowings_query_unreturned_books, (email,))
     user_unreturned_borrowings = cursor.fetchall()
     
     print("%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
@@ -199,7 +198,7 @@ def return_a_book(email):
     cursor.execute('UPDATE borrowings SET end_date = JULIANDAY("now") WHERE bid = ?', return_id)
 
     # For overdue borrowings, apply penalty and update in database
-    cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', return_id)
+    cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', return_id,)
     returned_book = cursor.fetchone()
     penalty = returned_book[2] - 20
     cursor.execute('UPDATE penalties SET amount = :penalty WHERE bid = :return_id', {"penalty":penalty, "return_id":return_id})
@@ -215,7 +214,7 @@ def return_a_book(email):
         last_rid = cursor.fetchone()
 
         # Get value of book_id for the current borrowing
-        cursor.execute('SELECT book_id FROM borrowings WHERE bid = ?', return_id)
+        cursor.execute('SELECT book_id FROM borrowings WHERE bid = ?', return_id,)
         book_id = cursor.fetchone()
         
         # Add user's review into review table
