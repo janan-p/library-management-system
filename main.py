@@ -83,7 +83,7 @@ def member_profile(email):
 
     cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
     member_info = cursor.fetchone() 
-    print(f"\nPersonal Information for {member_info[1]}:\n")
+    print(f"\n--------- Personal Information for {member_info[1]}: ---------\n")
     print(f"Email: {member_info[0]}")
     print(f"Birth Year: {member_info[2]}")
 
@@ -119,7 +119,7 @@ def member_profile(email):
     user_overdue_borrowings = cursor.fetchone()[0]
     print(f"Overdue borrowings: {user_overdue_borrowings} ")
 
-    print(f"Penalties:")
+    print(f"\n-------------- Penalties: --------------\n")
     cursor.execute(''' 
                     SELECT COUNT(*)  
                     FROM penalties p 
