@@ -238,23 +238,67 @@ def search_a_book(): #Search for a book
                     WHERE bk.book_id LIKE ? OR bk.author LIKE ?'''#How do we check if the book is available?
 
 def pay_a_penalty(email):
-        # The system should show a list of unpaid penalties (any penalty that is not paid in full) of the user. 
-    # The user should be able to select a penalty and pay it partially or in full.
+    '''
+    Displays users unpaid fees anf give them an option to pay partially or fully.
+    '''
     global connection, cursor
 
     # Find the user's penalties
     penalty_query = '''
-                    SELECT p.pid, p.amount, p.paid_amount 
+                    SELECT p.pid, p.amount, IFNULL(p.paid_amount, 0) 
                     FROM penalties p, borrowings b 
                     WHERE b.member = ?
                     AND b.bid = p.bid
+                    AND (p.paid_amount IS NULL OR p.paid_amount < p.amount)
                     '''
-    cursor.execute(penalty_query, email)
-    penalties = cursor.fetchall()
+    cursor.execute(penalty_query, (email,))
+    unpaid_penalties = cursor.fetchall()
 
+    # if the user has no penalties
+    if len(unpaid_penalties) == 0:
+        print("\nYou do not have any unpaid penalties!")
+        return
     
-    connection.commit()
+    # show all the unpaid penalties
+    for penalty in unpaid_penalties:
+        pid, amount, paid_amount = penalty
+        print(f"\nPenalty ID: {pid}, Amount: {amount}, Paid Amount: {paid_amount}")
 
+    # make sure the penalty ID is valid and set the penalty they want to pay as chosen penalty
+    valid_id = False
+    while not valid_id:
+        chosen_pid = int(input("Enter the Penalty ID to pay: "))
+        for penalty in unpaid_penalties:
+            if penalty[0] == chosen_pid:
+                chosen_penalty = penalty
+                valid_id = True
+                break
+        if not valid_id:
+            print("Invalid Penalty ID. Please try again.")
+
+    chosen_pid = chosen_penalty[0]
+    print(f"You have chosen Penalty # {chosen_penalty[0]}, the fee is {chosen_penalty[1]}, and you have paid {chosen_penalty[2]}.")
+    
+    # Calcuate remainin penalty fee so user can't pay more than they need to
+    if paid_amount is None:
+        remaining_amount = chosen_penalty[1]
+    else:
+        remaining_amount = chosen_penalty[1] - chosen_penalty[2]
+    #print(remaining_amount)
+    # User can partially or fully pay   
+    payment = float(input("Enter amount you want to pay: "))
+    if payment <= remaining_amount:
+        paid_amount = payment + chosen_penalty[2]
+        payment_query = '''
+                    UPDATE penalties SET paid_amount = ? WHERE pid = ?
+                    '''      
+        cursor.execute(payment_query, (paid_amount, chosen_pid))
+        connection.commit()
+        print("Payment Successful.")
+    else:
+        print("Payment exceeds the remaining amount. Payment not processed.")
+        
+    return
 #--------------------------------------------------------------------------------------------------------
 def main(): 
     global connection, cursor
@@ -276,7 +320,6 @@ def main():
             elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
                 login_success = login()
                 if login_success:
-                    #add whatever functions we want the user to perform after they login 
                     current_user = login_success  #return email from login() function
                     
                 else:
@@ -312,7 +355,7 @@ def main():
                 search_a_book()
 
             elif user_task_choice == '4': #user chose pay a penalty
-                pay_a_penalty()
+                pay_a_penalty(current_user)
 
             elif user_task_choice.lower() == 'log out':
                 current_user = None #no current user anymore, as logged out 
