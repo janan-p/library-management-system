@@ -165,7 +165,7 @@ def return_a_book(email):
     if not user_borrowings:
         print("\nYou do not have any borrowings!")
     else:
-        print("%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
+        print("\n%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
         # Print out borrowing info for unreturned books
         for borrowing in user_borrowings:
             bid = borrowing[0]
