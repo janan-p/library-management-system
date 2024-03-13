@@ -243,7 +243,7 @@ def search_a_book(email): #Search for a book
                             FROM borrowings br
                             WHERE br.book_id = bk.book_id AND br.end_date >= DATE('now')
                             LIMIT 1),
-                            'Available')
+                            'Available') 
                     FROM books bk
                     LEFT JOIN reviews r ON bk.book_id = r.book_id
                     WHERE bk.title LIKE '%'||?||'%' 
