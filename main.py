@@ -240,12 +240,13 @@ def search_a_book(email): #Search for a book
                     SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
                     Case 
                         When br.end_date IS NULL then 'unavailble'
-                        When exists (select 1
+                        ELSE
+                            CASE When exists (select 1
                                     from borrowings br
-                                    where br.book_id = bk.book_id)
-                                    then 'Unavialble'
-                    Else 'Available' End
-
+                                    where br.book_id = bk.book_id) then 'Unavialble'
+                                    Else 'Available' 
+                            End
+                    END
                     FROM books bk
                     LEFT JOIN reviews r ON bk.book_id = r.book_id
                     LEFT JOIN borrowings br on bk.book_id = br.book_id
