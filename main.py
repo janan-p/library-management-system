@@ -237,18 +237,32 @@ def search_a_book(email): #Search for a book
 
     user_keyword = input("Enter a key word to search for: ").lower()#Main keyword we will use
     title_query = '''
-                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, AVG(r.rating)
-                    FROM books bk, reviews r
-                    WHERE bk.title LIKE '%'||?||'%' AND r.book_id = bk.book_id
+                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating')
+                    FROM books bk
+                    LEFT JOIN reviews r ON bk.book_id = r.book_id
+                    WHERE bk.title LIKE '%'||?||'%' 
                     GROUP BY bk.book_id;
                     '''#How do we check if the book is available?
     cursor.execute(title_query, (user_keyword,)) 
     title_list = cursor.fetchall()
-    print(title_list)
-    # for book in title_list:
-    #     book_id, title, author, pyear, rating = book
-    #     print(f'{book_id} {title} {author} {pyear} {rating}')
-
+    # print(title_list)
+    print("\nMatching Ttile List")
+    for book in title_list:
+        book_id, title, author, pyear, rating = book
+        print(f'{book_id} {title} {author} {pyear} {rating}')
+    author_query = '''
+                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating')
+                    FROM books bk
+                    LEFT JOIN reviews r ON bk.book_id = r.book_id
+                    WHERE bk.author LIKE '%'||?||'%'
+                    GROUP BY bk.book_id;
+                    '''
+    cursor.execute(author_query, (user_keyword,)) 
+    author_list = cursor.fetchall()
+    print("\nMatching Author list")
+    for author in author_list:
+        book_id, title, author, pyear, rating = author
+        print(f'{book_id} {title} {author} {pyear} {rating}')
     connection.commit()
     return
 
