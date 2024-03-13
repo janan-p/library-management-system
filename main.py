@@ -232,14 +232,25 @@ def return_a_book(email):
     
     connection.commit()
 
-def search_a_book(): #Search for a book
+def search_a_book(email): #Search for a book
     global connection, cursor
 
-    user_keyword = input("Enter a key word to search for: ")#Main keyword we will use
-    search_query = '''
+    user_keyword = input("Enter a key word to search for: ").lower()#Main keyword we will use
+    title_query = '''
                     SELECT bk.book_id, bk.title, bk.author, bk.pyear, AVG(r.rating)
-                    FROM books bk, reviews r, borrowings b
-                    WHERE bk.book_id LIKE ? OR bk.author LIKE ?'''#How do we check if the book is available?
+                    FROM books bk, reviews r
+                    WHERE bk.title LIKE '%'||?||'%' AND r.book_id = bk.book_id
+                    GROUP BY bk.book_id;
+                    '''#How do we check if the book is available?
+    cursor.execute(title_query, (user_keyword,)) 
+    title_list = cursor.fetchall()
+    print(title_list)
+    # for book in title_list:
+    #     book_id, title, author, pyear, rating = book
+    #     print(f'{book_id} {title} {author} {pyear} {rating}')
+
+    connection.commit()
+    return
 
 def pay_a_penalty(email):
     '''
@@ -356,7 +367,7 @@ def main():
                 return_a_book(current_user)
 
             elif user_task_choice == '3': #user chose search a book
-                search_a_book()
+                search_a_book(current_user)
 
             elif user_task_choice == '4': #user chose pay a penalty
                 pay_a_penalty(current_user)
