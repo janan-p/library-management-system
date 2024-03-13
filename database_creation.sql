@@ -72,6 +72,7 @@ INSERT INTO books values(4, 'Book 4', 'Arthur', 2020);
 INSERT INTO books values(5, 'Book 5', 'Arash', 2017);
 INSERT INTO books values(6, 'Book 6', 'Rejwana', 2017);
 
+
 INSERT INTO borrowings values(1, 'arch@ualberta.ca', 1, '2023-11-15', NULL);
 INSERT INTO borrowings values(2, 'arch@ualberta.ca', 1, '2023-11-15', NULL);
 INSERT INTO borrowings values(3, 'siddh@ualberta.ca', 2, '2023-11-15', NULL);

@@ -237,7 +237,13 @@ def search_a_book(email): #Search for a book
 
     user_keyword = input("Enter a key word to search for: ").lower()#Main keyword we will use
     title_query = '''
-                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating')
+                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
+                    IFNULL(
+                            (SELECT 'Not Available'
+                            FROM borrowings br
+                            WHERE br.book_id = bk.book_id AND br.end_date >= DATE('now')
+                            LIMIT 1),
+                            'Available')
                     FROM books bk
                     LEFT JOIN reviews r ON bk.book_id = r.book_id
                     WHERE bk.title LIKE '%'||?||'%' 
@@ -246,10 +252,10 @@ def search_a_book(email): #Search for a book
     cursor.execute(title_query, (user_keyword,)) 
     title_list = cursor.fetchall()
     # print(title_list)
-    print("\nMatching Ttile List")
+    print("\nMatching Title List")
     for book in title_list:
-        book_id, title, author, pyear, rating = book
-        print(f'{book_id} {title} {author} {pyear} {rating}')
+        book_id, title, author, pyear, rating, availablity = book
+        print(f'{book_id} {title} {author} {pyear} {rating} {availablity}')
     author_query = '''
                     SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating')
                     FROM books bk
