@@ -240,13 +240,12 @@ def search_a_book(email): #Search for a book
                     SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
                     Case 
                         When br.end_date IS NULL then 'unavailble'
-                        ELSE
-                            CASE When exists (select 1
+                        When exists (select 1
                                     from borrowings br
-                                    where br.book_id = bk.book_id) then 'Unavialble'
-                                    Else 'Available' 
-                            End
-                    END
+                                    where br.book_id = bk.book_id)
+                                    then 'Unavialble'
+                    Else 'Available' End
+
                     FROM books bk
                     LEFT JOIN reviews r ON bk.book_id = r.book_id
                     LEFT JOIN borrowings br on bk.book_id = br.book_id
@@ -256,6 +255,14 @@ def search_a_book(email): #Search for a book
                     '''#How do we check if the book is available? When br.end_date IS NULL then 'Unavailable'
                     #Never been borrowed
                     #Already been returned - end_date is before current date
+    
+    # Case 
+    #                     When br.end_date IS NULL then 'unavailble'
+    #                     When exists (select 1
+    #                                 from borrowings br
+    #                                 where br.book_id = bk.book_id)
+    #                                 then 'Unavialble'
+    #                 Else 'Available' End
   
 #BORROWING TABLE 
 # 1|arch@ualberta.ca|1|2023-11-15|
@@ -276,13 +283,16 @@ def search_a_book(email): #Search for a book
         book_id, title, author, pyear, rating, avail = book
         print(f'{book_id} {title} {author} {pyear} {rating} {avail}')
 
-
-
-
     author_query = '''
-                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating')
+                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
+                    CASE
+                        WHEN (br.end_date IS NULL OR EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id))
+                            AND NOT (br.end_date IS NULL AND EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id)) THEN 'Available'
+                        ELSE 'Unavialable'
+                    END
                     FROM books bk
                     LEFT JOIN reviews r ON bk.book_id = r.book_id
+                    LEFT JOIN borrowings br on bk.book_id = br.book_id
                     WHERE bk.author LIKE '%'||?||'%'
                     GROUP BY bk.book_id;
                     '''
@@ -290,8 +300,8 @@ def search_a_book(email): #Search for a book
     author_list = cursor.fetchall()
     print("\nMatching Author list:")
     for author in author_list:
-        book_id, title, author, pyear, rating = author
-        print(f'{book_id} {title} {author} {pyear} {rating}')
+        book_id, title, author, pyear, rating, available= author
+        print(f'{book_id} {title} {author} {pyear} {rating} {available}')
     connection.commit()
     return
 
