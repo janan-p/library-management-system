@@ -238,24 +238,46 @@ def search_a_book(email): #Search for a book
     user_keyword = input("Enter a key word to search for: ").lower()#Main keyword we will use
     title_query = '''
                     SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
-                    IFNULL(
-                            (SELECT 'Not Available'
-                            FROM borrowings br
-                            WHERE br.book_id = bk.book_id AND br.end_date >= DATE('now')
-                            LIMIT 1),
-                            'Available') 
+                    Case 
+                        When br.end_date IS NULL then 'unavailble'
+                        When exists (select 1
+                                    from borrowings br
+                                    where br.book_id = bk.book_id)
+                                    then 'Unavialble'
+                    Else 'Available' End
+
                     FROM books bk
                     LEFT JOIN reviews r ON bk.book_id = r.book_id
+                    LEFT JOIN borrowings br on bk.book_id = br.book_id
                     WHERE bk.title LIKE '%'||?||'%' 
-                    GROUP BY bk.book_id;
-                    '''#How do we check if the book is available?
+                    GROUP BY bk.book_id
+                    ORDER BY bk.title ASC; 
+                    '''#How do we check if the book is available? When br.end_date IS NULL then 'Unavailable'
+                    #Never been borrowed
+                    #Already been returned - end_date is before current date
+  
+#BORROWING TABLE 
+# 1|arch@ualberta.ca|1|2023-11-15|
+# 2|arch@ualberta.ca|2|2023-11-15|
+# 3|siddh@ualberta.ca|3|2023-11-15|
+# 4|keya@ualberta.ca|4|2023-10-15|2023-10-25
+# 5|keya@ualberta.ca|5|2023-10-15|2023-10-25
+# 6|dhiya@ualberta.ca|6|2023-10-15|2023-11-25
+# 7|annoying@ualberta.ca|4|2023-10-15|2023-11-25
+# 8|dhanshri@ualberta.ca|5|2023-10-15|2023-10-25
+# 9|jpanchal@ualberta.ca|6|2023-11-15|
+# 10|asshah1@ualberta.ca|7|2023-11-15|
     cursor.execute(title_query, (user_keyword,)) 
     title_list = cursor.fetchall()
     # print(title_list)
-    print("\nMatching Title List")
+    print("\nMatching Title List:")
     for book in title_list:
-        book_id, title, author, pyear, rating, availablity = book
-        print(f'{book_id} {title} {author} {pyear} {rating} {availablity}')
+        book_id, title, author, pyear, rating, avail = book
+        print(f'{book_id} {title} {author} {pyear} {rating} {avail}')
+
+
+
+
     author_query = '''
                     SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating')
                     FROM books bk
@@ -265,7 +287,7 @@ def search_a_book(email): #Search for a book
                     '''
     cursor.execute(author_query, (user_keyword,)) 
     author_list = cursor.fetchall()
-    print("\nMatching Author list")
+    print("\nMatching Author list:")
     for author in author_list:
         book_id, title, author, pyear, rating = author
         print(f'{book_id} {title} {author} {pyear} {rating}')
