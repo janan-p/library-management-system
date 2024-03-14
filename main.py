@@ -1,5 +1,6 @@
 import sqlite3
 import getpass
+from datetime import date
 
 connection = None
 cursor = None
@@ -188,7 +189,8 @@ def return_a_book(email):
                 return_id = input("Borrowing ID: ")
 
         # Enter today's date as return date in database
-        cursor.execute('UPDATE borrowings SET end_date = JULIANDAY("now") WHERE bid = ?', (return_id,))
+        today = date.today()
+        cursor.execute('UPDATE borrowings SET end_date = ? WHERE bid = ?', (today, return_id,))
 
         print("\nYour book is successfully returned!")
 
@@ -210,11 +212,11 @@ def return_a_book(email):
             review_option = input("\nInvalid input! Type either 'yes' or 'no': ")
 
         if review_option.lower() == "yes" or review_option.lower() == "y":
-            review_text = input("\nWhat is your review for this book? \n")
             review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
             while int(review_rating) < 1 or int(review_rating) > 5:
                 print("\nPlease enter a number between 1 to 5 inclusive.")
                 review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
+            review_text = input("\nWhat is your review for this book? \n")
 
             # Find last rid number
             cursor.execute('SELECT rid FROM reviews ORDER BY rid DESC LIMIT 1')
@@ -225,10 +227,11 @@ def return_a_book(email):
             book_id = cursor.fetchone()
             
             # Add user's review into review table
+            
             review_query = '''
-                        INSERT INTO reviews VALUES(:rid, :book_id, :member, :rating, :rtext, JULIANDAY("now")) 
+                        INSERT INTO reviews VALUES(:rid, :book_id, :member, :rating, :rtext, :rdate) 
                         '''
-            cursor.execute(review_query, {"rid":last_rid[0] + 1, "book_id":book_id[0], "member":email, "rating":review_rating, "rtext":review_text})
+            cursor.execute(review_query, {"rid":last_rid[0] + 1, "book_id":book_id[0], "member":email, "rating":review_rating, "rtext":review_text, "rdate": today})
     
     connection.commit()
 
@@ -294,7 +297,7 @@ def search_a_book(email): #Search for a book
 
     if len(book_to_borrow) > 0:
         book_to_borrow = int(book_to_borrow)
-        print(book_to_borrow)
+        #print(book_to_borrow)
         condition = True
 
         for book in matching_books:
@@ -305,12 +308,13 @@ def search_a_book(email): #Search for a book
                 cursor.execute(bid_query)
                 max_bid = cursor.fetchone()
                 #print(max_bid[0] + 1)
-                
+                today = date.today()
                 borrowing_query = '''
                     INSERT INTO borrowings (bid, member, book_id, start_date, end_date)
-                    VALUES (?, ?, ?, JULIANDAY("now"), NULL)'''
+                    VALUES (?, ?, ?, ?, NULL)'''
                 
-                cursor.execute(borrowing_query, (max_bid[0] + 1, email, book_to_borrow))
+                cursor.execute(borrowing_query, (max_bid[0] + 1, email, book_to_borrow, today))
+                print("The book has been sucessfully borrowed!")
                 return
         if condition: 
             print("This book is not available for borrowing or invalid book ID is entered.")
