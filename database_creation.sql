@@ -66,6 +66,9 @@ Books Table
 8|Book 8|Dhanshri|2019
 9|Book 9|Vasu|2069
 10|Book 10|Arham|2018
+11|Arthur the Vasu|Keya|2018
+12|Regina|Saskatchewan|2020
+13|Row or Lat Pull?|Dhanu|2024
 
 Borrowings Table
 1|arch@ualberta.ca|1|2023-11-15|
