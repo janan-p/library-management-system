@@ -164,14 +164,14 @@ def return_a_book(email):
     if not user_borrowings:
         print("\nYou do not have any borrowings!")
     else:
-        print("\n%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
+        print("\n%-16s %-14s %-18s %-12s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
         # Print out borrowing info for unreturned books
         for borrowing in user_borrowings:
             bid = borrowing[0]
             title = borrowing[1]
             borrow_date = borrowing[2]
             deadline = borrowing[3]
-            print("%-16s %-16s %-16s %-16s" % (bid, title, borrow_date, deadline))
+            print("%-16s %-14s %-18s %-12s" % (bid, title, borrow_date, deadline))
 
         # Check if the return_id chosen by the user is valid
         print("\nPlease choose a book to return.")
@@ -236,28 +236,52 @@ def search_a_book(email): #Search for a book
     global connection, cursor
 
     user_keyword = input("Enter a key word to search for: ").lower()
+    # Return books that match the name entered
     search_query = '''
                     SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
                     CASE
                         WHEN NOT EXISTS (
                             SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id AND br.end_date IS NULL
                         ) THEN 'Available'
-                        ELSE 'Unavailable'
+                        ELSE 'On borrow'
                     END AS availability
                     FROM books bk
                     LEFT JOIN reviews r ON bk.book_id = r.book_id
                     LEFT JOIN borrowings br ON bk.book_id = br.book_id
                     WHERE LOWER(bk.title) LIKE '%' || ? || '%' OR LOWER(bk.author) LIKE '%' || ? || '%'
-                    GROUP BY bk.book_id
-                    ORDER BY bk.title ASC;
+                    GROUP BY bk.book_id, bk.title, bk.author, bk.pyear
+                    ORDER BY bk.author, bk.title ASC; 
+                    LIMIT 5 OFFSET ?
                 '''
+    more_pages = input("\nWould you like to see more results? (Yes or No)\n")
+    if more_pages.lower() == "yes" or more_pages.lower() == "y":
+        cursor.execute(search_query, (user_keyword, user_keyword, ))
+    elif more_pages.lower() == "no" or more_pages.lower() == "n":
+    else:
+        print()
+        
+
+    ''' For the bonus:
+    Use an if else statement. If there are less than 5 search results, display all. 
+    Else if there are more than 5 results, use LIMIT to show the first 5
+    Then use PROMPT or ACCEPT to ask user if they want to see more results
+    If they say yes, use OFFSET 5 to remove 5 results and FETCH NEXT 5 to show next 5 results
+    '''
+
     cursor.execute(search_query, (user_keyword, user_keyword))
     matching_books = cursor.fetchall()
 
-    print("\nMatching Books:\n")
+    print("\n-------------- Matching Books --------------\n")
+    print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
     for book in matching_books:
-        book_id, title, author, pyear, rating, avail = book
-        print(f'{book_id} {title} {author} {pyear} {rating} {avail}')
+        book_id = book[0]
+        title = book[1]
+        author = book[2]
+        pyear = book[3]
+        rating = book[4]
+        avail = book[5]
+        print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
+    print("\n")
     
     if len(matching_books) == 0:
         print("No matching books.") #if there is no matching books will matching_books be 0 or NULL, check with others 
@@ -270,40 +294,21 @@ def search_a_book(email): #Search for a book
 
         for book in matching_books:
             if book[0] == book_to_borrow and book[5].lower() == 'Available':
-                #insert row into borrowings table and update book availability?
+                bid_query = '''Select MAX(bid) from borrowings;'''
+                cursor.execute(bid_query)
+                max_bid = cursor.fetchone()
+                print(max_bid)
+                borrowing_query = '''
+                    INSERT INTO borrowings (bid, member, book_id, start_date, end_date)
+                    VALUES (?, ?, ?, ?, ?)'''
+                
+                cursor.execute(borrowing_query, (pass, email, book_to_borrow, JULAINday("now"), NULL))
                 return
             else:
                 print("This book is not available for borrowing or invalid book ID is entered.")
+                break
 
     #need to the five at a time thing that is part of bonus, iuc dunno how to do itttt
-    
-
-
-    # user_keyword = input("Enter a key word to search for: ").lower()#Main keyword we will use, would it be better if we pass this as a param? and ask for input in main for better flow idk
-    # title_query = '''
-    #                 SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
-    #                 CASE
-    #                     WHEN (br.end_date IS NULL OR EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id))
-    #                         AND NOT (br.end_date IS NULL AND EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id)) THEN 'Available'
-    #                     ELSE 'Unavialable'
-    #                 END
-    #                 FROM books bk
-    #                 LEFT JOIN reviews r ON bk.book_id = r.book_id
-    #                 LEFT JOIN borrowings br on bk.book_id = br.book_id
-    #                 WHERE bk.title LIKE '%'||?||'%' 
-    #                 GROUP BY bk.book_id
-    #                 ORDER BY bk.title ASC; 
-    #                 '''#How do we check if the book is available? When br.end_date IS NULL then 'Unavailable'
-    #                 #Never been borrowed
-    #                 #Already been returned - end_date is before current date
-    
-    # Case 
-    #                     When br.end_date IS NULL then 'unavailble'
-    #                     When exists (select 1
-    #                                 from borrowings br
-    #                                 where br.book_id = bk.book_id)
-    #                                 then 'Unavialble'
-    #                 Else 'Available' End
   
 #BORROWING TABLE 
 # 1|arch@ualberta.ca|1|2023-11-15|
@@ -316,35 +321,6 @@ def search_a_book(email): #Search for a book
 # 8|dhanshri@ualberta.ca|5|2023-10-15|2023-10-25
 # 9|jpanchal@ualberta.ca|6|2023-11-15|
 # 10|asshah1@ualberta.ca|7|2023-11-15|
-    # cursor.execute(title_query, (user_keyword,)) 
-    # title_list = cursor.fetchall()
-    
-    # print("\nMatching Title List:") # print(title_list)
-    # for book in title_list:
-    #     book_id, title, author, pyear, rating, avail = book
-    #     print(f'{book_id} {title} {author} {pyear} {rating} {avail}')
-
-    # author_query = '''
-    #                 SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
-    #                 CASE
-    #                     WHEN (br.end_date IS NULL OR EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id))
-    #                         AND NOT (br.end_date IS NULL AND EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id)) THEN 'Available'
-    #                     ELSE 'Unavialable'
-    #                 END
-    #                 FROM books bk
-    #                 LEFT JOIN reviews r ON bk.book_id = r.book_id
-    #                 LEFT JOIN borrowings br on bk.book_id = br.book_id
-    #                 WHERE bk.author LIKE '%'||?||'%'
-    #                 GROUP BY bk.book_id;
-    #                 '''
-    # cursor.execute(author_query, (user_keyword,)) 
-    # author_list = cursor.fetchall()
-    # print("\nMatching Author list:")
-    # for author in author_list:
-    #     book_id, title, author, pyear, rating, available= author
-    #     print(f'{book_id} {title} {author} {pyear} {rating} {available}')
-    # connection.commit()
-    # return
 
 def pay_a_penalty(email):
     '''
