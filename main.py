@@ -250,16 +250,19 @@ def search_a_book(email): #Search for a book
                     LEFT JOIN borrowings br ON bk.book_id = br.book_id
                     WHERE LOWER(bk.title) LIKE '%' || ? || '%' OR LOWER(bk.author) LIKE '%' || ? || '%'
                     GROUP BY bk.book_id, bk.title, bk.author, bk.pyear
-                    ORDER BY bk.author, bk.title ASC; 
-                    LIMIT 5 OFFSET ?
+                    ORDER BY bk.author, bk.title ASC;
+                    
                 '''
-    more_pages = input("\nWould you like to see more results? (Yes or No)\n")
-    if more_pages.lower() == "yes" or more_pages.lower() == "y":
-        cursor.execute(search_query, (user_keyword, user_keyword, ))
-    elif more_pages.lower() == "no" or more_pages.lower() == "n":
-    else:
-        print()
-        
+                    #LIMIT 5 OFFSET ?; add it back in the query
+    
+    # more_pages = input("\nWould you like to see more results? (Yes or No)\n")
+    # if more_pages.lower() == "yes" or more_pages.lower() == "y":
+    #     cursor.execute(search_query, (user_keyword, user_keyword, ))
+    # elif more_pages.lower() == "no" or more_pages.lower() == "n":
+    #     pass
+    # else:
+    #     print()
+        #NEED TO UNCOMMENT
 
     ''' For the bonus:
     Use an if else statement. If there are less than 5 search results, display all. 
@@ -291,22 +294,27 @@ def search_a_book(email): #Search for a book
 
     if len(book_to_borrow) > 0:
         book_to_borrow = int(book_to_borrow)
+        print(book_to_borrow)
+        condition = True
 
         for book in matching_books:
-            if book[0] == book_to_borrow and book[5].lower() == 'Available':
+            #print(book[0])
+            if book[0] == book_to_borrow and book[5].lower() == 'available':
+                condition = False
                 bid_query = '''Select MAX(bid) from borrowings;'''
                 cursor.execute(bid_query)
                 max_bid = cursor.fetchone()
-                print(max_bid)
+                #print(max_bid[0] + 1)
+                
                 borrowing_query = '''
                     INSERT INTO borrowings (bid, member, book_id, start_date, end_date)
-                    VALUES (?, ?, ?, ?, ?)'''
+                    VALUES (?, ?, ?, JULIANDAY("now"), NULL)'''
                 
-                cursor.execute(borrowing_query, (pass, email, book_to_borrow, JULAINday("now"), NULL))
+                cursor.execute(borrowing_query, (max_bid[0] + 1, email, book_to_borrow))
                 return
-            else:
-                print("This book is not available for borrowing or invalid book ID is entered.")
-                break
+        if condition: 
+            print("This book is not available for borrowing or invalid book ID is entered.")
+                
 
     #need to the five at a time thing that is part of bonus, iuc dunno how to do itttt
   
