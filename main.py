@@ -71,24 +71,20 @@ def login():
         return email
     
     else:
-        print("Invalid email or password.") #We should add a \n at the start of this print statement
+        print("\n Invalid email or password.")
         return False 
     
 #-----------------------------------------------------------------------------------------------------
         
 def member_profile(email):
-    # do we need the login to return the email so that we can use it here? maybe add it as a parameter
-    #Personal information (such as name, email and birth year).
-    #The number of the books they have borrowed and returned (shown as previous borrowings), the current borrowings which is the number of their unreturned borrowings, and overdue borrowings, which is the number of their current borrowings that are not returned within the deadline. The return deadline is 20 days after the borrowing date.
-    #Penalty information, displaying the number of unpaid penalties (any penalty that is not paid in full), and the user's total debt amount on unpaid penalties.
 
     cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
     member_info = cursor.fetchone() 
-    print(f"\n--------- Personal Information for {member_info[1]}: ---------\n")
+    print(f"\n--------- Personal Information for {member_info[1]} ---------\n")
     print(f"Email: {member_info[0]}")
     print(f"Birth Year: {member_info[2]}")
 
-    print(f"Borrowings/Returns:")
+    print(f"\n--------- Borrowings/Returns ---------\n")
     cursor.execute(''' 
                     SELECT COUNT(*)  
                     FROM borrowings 
@@ -120,7 +116,7 @@ def member_profile(email):
     user_overdue_borrowings = cursor.fetchone()[0]
     print(f"Overdue borrowings: {user_overdue_borrowings} ")
 
-    print(f"\n-------------- Penalties: --------------\n")
+    print(f"\n-------------- Penalties --------------\n")
     cursor.execute(''' 
                     SELECT COUNT(*)  
                     FROM penalties p 
@@ -142,8 +138,6 @@ def member_profile(email):
     
     user_total_debt = cursor.fetchone()[0]
     print(f"Total debt on unpaid penalties: {user_total_debt} ")
-
-    pass
 
 def return_a_book(email):
     global connection, cursor
@@ -194,12 +188,6 @@ def return_a_book(email):
 
         print("\nYour book is successfully returned!")
 
-        '''
-        
-        Do we want to add a section that tells the user that they returned a book late and a penalty was applied?
-        
-        '''
-
         # For overdue borrowings, apply penalty and update in database
         cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', (return_id,))
         returned_book = cursor.fetchone()
@@ -212,10 +200,10 @@ def return_a_book(email):
             review_option = input("\nInvalid input! Type either 'yes' or 'no': ")
 
         if review_option.lower() == "yes" or review_option.lower() == "y":
-            review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
-            while int(review_rating) < 1 or int(review_rating) > 5:
+            review_rating = float(input("\nWhat rating would you give this book? (1-5 inclusive) "))
+            while float(review_rating) < 1 or float(review_rating) > 5:
                 print("\nPlease enter a number between 1 to 5 inclusive.")
-                review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
+                review_rating = float(input("\nWhat rating would you give this book? (1-5 inclusive) "))
             review_text = input("\nWhat is your review for this book? \n")
 
             # Find last rid number
@@ -227,7 +215,6 @@ def return_a_book(email):
             book_id = cursor.fetchone()
             
             # Add user's review into review table
-            
             review_query = '''
                         INSERT INTO reviews VALUES(:rid, :book_id, :member, :rating, :rtext, :rdate) 
                         '''
@@ -271,7 +258,7 @@ def search_a_book(email): #Search for a book
         print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
     print("\n")
 
-    '''
+    ''' FOR BONUS
     if len(matching_books) == 0:
         print("No matching books.") #if there is no matching books will matching_books be 0 or NULL, check with others 
         return
@@ -316,17 +303,14 @@ def search_a_book(email): #Search for a book
 
     if len(book_to_borrow) > 0:
         book_to_borrow = int(book_to_borrow)
-        #print(book_to_borrow)
         condition = True
 
         for book in matching_books:
-            #print(book[0])
             if book[0] == book_to_borrow and book[6] == 'Available':
                 condition = False
                 bid_query = '''Select MAX(bid) from borrowings;'''
                 cursor.execute(bid_query)
                 max_bid = cursor.fetchone()
-                #print(max_bid[0] + 1)
                 today = date.today()
                 borrowing_query = '''
                     INSERT INTO borrowings (bid, member, book_id, start_date, end_date)
@@ -337,22 +321,12 @@ def search_a_book(email): #Search for a book
                 return
         if condition: 
             print("This book is not available for borrowing or invalid book ID is entered.")
-  
-#BORROWING TABLE 
-# 1|arch@ualberta.ca|1|2023-11-15|
-# 2|arch@ualberta.ca|2|2023-11-15|
-# 3|siddh@ualberta.ca|3|2023-11-15|
-# 4|keya@ualberta.ca|4|2023-10-15|2023-10-25
-# 5|keya@ualberta.ca|5|2023-10-15|2023-10-25
-# 6|dhiya@ualberta.ca|6|2023-10-15|2023-11-25
-# 7|annoying@ualberta.ca|4|2023-10-15|2023-11-25
-# 8|dhanshri@ualberta.ca|5|2023-10-15|2023-10-25
-# 9|jpanchal@ualberta.ca|6|2023-11-15|
-# 10|asshah1@ualberta.ca|7|2023-11-15|
 
+    connection.commit()
+  
 def pay_a_penalty(email):
     '''
-    Displays users unpaid fees anf give them an option to pay partially or fully.
+    Displays users unpaid fees and give them an option to pay partially or fully.
     '''
     global connection, cursor
 
@@ -397,7 +371,7 @@ def pay_a_penalty(email):
         remaining_amount = chosen_penalty[1]
     else:
         remaining_amount = chosen_penalty[1] - chosen_penalty[2]
-    #print(remaining_amount)
+
     # User can partially or fully pay   
     payment = float(input("Enter amount you want to pay: "))
     if payment <= remaining_amount:
@@ -420,14 +394,13 @@ def main():
     connect(path)
 
     option_choosen = True
-    
     current_user = None 
     
     while option_choosen: 
         if current_user == None:
             user_option = input("\nDo you have an account? (Yes or No)\nIf you want to exit (exit): ")
 
-            if user_option.lower() == "exit":#exiting the code
+            if user_option.lower() == "exit": #exiting the code
                 break
 
             elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
