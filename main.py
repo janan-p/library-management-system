@@ -321,7 +321,7 @@ def search_a_book(email): #Search for a book
 
         for book in matching_books:
             #print(book[0])
-            if book[0] == book_to_borrow and book[5] == 'Available':
+            if book[0] == book_to_borrow and book[6] == 'Available':
                 condition = False
                 bid_query = '''Select MAX(bid) from borrowings;'''
                 cursor.execute(bid_query)
