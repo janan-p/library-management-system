@@ -241,7 +241,7 @@ def search_a_book(email): #Search for a book
     user_keyword = input("Enter a key word to search for: ").lower()
     # Return books that match the name entered
     search_query = '''
-                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
+                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'), COUNT(bk.book_id),
                     CASE
                         WHEN NOT EXISTS (
                             SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id AND br.end_date IS NULL
@@ -253,31 +253,13 @@ def search_a_book(email): #Search for a book
                     LEFT JOIN borrowings br ON bk.book_id = br.book_id
                     WHERE LOWER(bk.title) LIKE '%' || ? || '%' OR LOWER(bk.author) LIKE '%' || ? || '%'
                     GROUP BY bk.book_id, bk.title, bk.author, bk.pyear
-                    ORDER BY bk.author, bk.title ASC;
-                    
+                    ORDER BY bk.title ASC, bk.author ASC
                 '''
-                    #LIMIT 5 OFFSET ?; add it back in the query
-    
-    # more_pages = input("\nWould you like to see more results? (Yes or No)\n")
-    # if more_pages.lower() == "yes" or more_pages.lower() == "y":
-    #     cursor.execute(search_query, (user_keyword, user_keyword, ))
-    # elif more_pages.lower() == "no" or more_pages.lower() == "n":
-    #     pass
-    # else:
-    #     print()
-        #NEED TO UNCOMMENT
-
-    ''' For the bonus:
-    Use an if else statement. If there are less than 5 search results, display all. 
-    Else if there are more than 5 results, use LIMIT to show the first 5
-    Then use PROMPT or ACCEPT to ask user if they want to see more results
-    If they say yes, use OFFSET 5 to remove 5 results and FETCH NEXT 5 to show next 5 results
-    '''
-
-    cursor.execute(search_query, (user_keyword, user_keyword))
+                # LIMIT ? OFFSET ?
+    cursor.execute(search_query, (user_keyword, user_keyword,))
     matching_books = cursor.fetchall()
 
-    print("\n-------------- Matching Books --------------\n")
+    print(f"\n-------------- Matching Books --------------\n")
     print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
     for book in matching_books:
         book_id = book[0]
@@ -285,14 +267,51 @@ def search_a_book(email): #Search for a book
         author = book[2]
         pyear = book[3]
         rating = book[4]
-        avail = book[5]
+        avail = book[6]
         print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
     print("\n")
-    
+
+    '''
     if len(matching_books) == 0:
         print("No matching books.") #if there is no matching books will matching_books be 0 or NULL, check with others 
-        return 
-    
+        return
+    elif len(matching_books) <= 5: # Only one page available to display
+        page = 1
+        print(f"\n-------------- Matching Books {page} --------------\n")
+        print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
+        for book in matching_books:
+            book_id = book[0]
+            title = book[1]
+            author = book[2]
+            pyear = book[3]
+            rating = book[4]
+            avail = book[6]
+            print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
+        print("\n")
+    else: # More than one page available to display
+        books_already_displayed = 5
+        more_pages = input("\nWould you like to see more results? (Yes or No)\n")
+        while more_pages.lower() == "yes" or more_pages.lower() == "y":
+            books_already_displayed += 5
+            page += 1
+            offset = (page - 1) * 5
+            cursor.execute(search_query, (user_keyword, user_keyword, books_already_displayed,))
+            matching_books = cursor.fetchall()
+            print(f"\n-------------- Matching Books (Page {page}) --------------\n")
+            print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
+            for book in matching_books:
+                book_id = book[0]
+                title = book[1]
+                author = book[2]
+                pyear = book[3]
+                rating = book[4]
+                avail = book[6]
+                print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
+            print("\n")
+            more_pages = input("\nWould you like to see more results? (Yes or No)\n")
+    '''
+
+    # Execute the borrowing procedure
     book_to_borrow = input("Enter the book ID of the book you wish to borrow: ").strip()
 
     if len(book_to_borrow) > 0:
@@ -302,7 +321,7 @@ def search_a_book(email): #Search for a book
 
         for book in matching_books:
             #print(book[0])
-            if book[0] == book_to_borrow and book[5].lower() == 'available':
+            if book[0] == book_to_borrow and book[5] == 'Available':
                 condition = False
                 bid_query = '''Select MAX(bid) from borrowings;'''
                 cursor.execute(bid_query)
@@ -318,9 +337,6 @@ def search_a_book(email): #Search for a book
                 return
         if condition: 
             print("This book is not available for borrowing or invalid book ID is entered.")
-                
-
-    #need to the five at a time thing that is part of bonus, iuc dunno how to do itttt
   
 #BORROWING TABLE 
 # 1|arch@ualberta.ca|1|2023-11-15|
