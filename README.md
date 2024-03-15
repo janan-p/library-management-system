@@ -10,12 +10,12 @@ Group member names and ccids (3-4 members)
 Connection: Dhanshri
 Login Page: 
 - Sign up: Dhanshri
-- Login: Aayushi
+- Login: Aayushi, Viral
 - Main Menu: Aayushi, Viral
 Member Profile: Aayushi
 Select a book: Aayushi, Janan, Dhanshri, Viral
 Return a book: Janan
-Pay a Penalty: Dhanshri
+Pay a Penalty: Dhanshri, Viral
 Created Test Database: Janan, Dhanshri, Viral, Aayushi
 
 # Code execution guide
