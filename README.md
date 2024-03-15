@@ -7,7 +7,15 @@ Group member names and ccids (3-4 members)
   dhanshri, Dhanshri Patel
 
 # Group work break-down strategy
-Please add
+Connection: Dhanshri
+Login Page: 
+- Sign up: Dhanshri
+- Login: Aayushi
+- Main Menu: Dhanshri, Aayushi, Viral
+Member Profile: Aayushi
+Select a book: Aayushi, Janan, Dhanshri, Viral
+Return a book: Janan
+Pay a Penalty: Dhanshri
 
 # Code execution guide
 Please add
