@@ -297,30 +297,35 @@ def search_a_book(email): #Search for a book
             print("\n")
             more_pages = input("\nWould you like to see more results? (Yes or No)\n")
     '''
+    user_choice = input("\nDo you want to borrow a book? (Yes/No) ")
+    while user_choice.lower() != "yes" and user_choice.lower() != "y" and user_choice.lower() != "no" and user_choice.lower() != "n":
+        print("\nPlease enter a valid input (Yes/No)")
+        user_choice = input("\nDo you want to borrow a book? (Yes/No) ")
 
-    # Execute the borrowing procedure
-    book_to_borrow = input("Enter the book ID of the book you wish to borrow: ").strip()
+    if user_choice.lower() == "yes" or user_choice.lower() == "y":
+        # Execute the borrowing procedure
+        book_to_borrow = input("Enter the book ID of the book you wish to borrow: ").strip()
 
-    if len(book_to_borrow) > 0:
-        book_to_borrow = int(book_to_borrow)
-        condition = True
+        if len(book_to_borrow) > 0:
+            book_to_borrow = int(book_to_borrow)
+            condition = True
 
-        for book in matching_books:
-            if book[0] == book_to_borrow and book[6] == 'Available':
-                condition = False
-                bid_query = '''Select MAX(bid) from borrowings;'''
-                cursor.execute(bid_query)
-                max_bid = cursor.fetchone()
-                today = date.today()
-                borrowing_query = '''
-                    INSERT INTO borrowings (bid, member, book_id, start_date, end_date)
-                    VALUES (?, ?, ?, ?, NULL)'''
-                
-                cursor.execute(borrowing_query, (max_bid[0] + 1, email, book_to_borrow, today))
-                print("The book has been sucessfully borrowed!")
-                return
-        if condition: 
-            print("This book is not available for borrowing or invalid book ID is entered.")
+            for book in matching_books:
+                if book[0] == book_to_borrow and book[6] == 'Available':
+                    condition = False
+                    bid_query = '''Select MAX(bid) from borrowings;'''
+                    cursor.execute(bid_query)
+                    max_bid = cursor.fetchone()
+                    today = date.today()
+                    borrowing_query = '''
+                        INSERT INTO borrowings (bid, member, book_id, start_date, end_date)
+                        VALUES (?, ?, ?, ?, NULL)'''
+                    
+                    cursor.execute(borrowing_query, (max_bid[0] + 1, email, book_to_borrow, today))
+                    print("The book has been sucessfully borrowed!")
+                    return
+            if condition: 
+                print("This book is not available for borrowing or invalid book ID is entered.")
 
     connection.commit()
   
