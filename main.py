@@ -1,5 +1,6 @@
 import sqlite3
 import getpass
+from datetime import date
 
 connection = None
 cursor = None
@@ -70,24 +71,20 @@ def login():
         return email
     
     else:
-        print("Invalid email or password.") #We should add a \n at the start of this print statement
+        print("\n Invalid email or password.")
         return False 
     
 #-----------------------------------------------------------------------------------------------------
         
 def member_profile(email):
-    # do we need the login to return the email so that we can use it here? maybe add it as a parameter
-    #Personal information (such as name, email and birth year).
-    #The number of the books they have borrowed and returned (shown as previous borrowings), the current borrowings which is the number of their unreturned borrowings, and overdue borrowings, which is the number of their current borrowings that are not returned within the deadline. The return deadline is 20 days after the borrowing date.
-    #Penalty information, displaying the number of unpaid penalties (any penalty that is not paid in full), and the user's total debt amount on unpaid penalties.
 
     cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
     member_info = cursor.fetchone() 
-    print(f"\n--------- Personal Information for {member_info[1]}: ---------\n")
+    print(f"\n--------- Personal Information for {member_info[1]} ---------\n")
     print(f"Email: {member_info[0]}")
     print(f"Birth Year: {member_info[2]}")
 
-    print(f"Borrowings/Returns:")
+    print(f"\n--------- Borrowings/Returns ---------\n")
     cursor.execute(''' 
                     SELECT COUNT(*)  
                     FROM borrowings 
@@ -119,7 +116,7 @@ def member_profile(email):
     user_overdue_borrowings = cursor.fetchone()[0]
     print(f"Overdue borrowings: {user_overdue_borrowings} ")
 
-    print(f"\n-------------- Penalties: --------------\n")
+    print(f"\n-------------- Penalties --------------\n")
     cursor.execute(''' 
                     SELECT COUNT(*)  
                     FROM penalties p 
@@ -142,8 +139,6 @@ def member_profile(email):
     user_total_debt = cursor.fetchone()[0]
     print(f"Total debt on unpaid penalties: {user_total_debt} ")
 
-    pass
-
 def return_a_book(email):
     global connection, cursor
 
@@ -164,14 +159,14 @@ def return_a_book(email):
     if not user_borrowings:
         print("\nYou do not have any borrowings!")
     else:
-        print("\n%-16s %-16s %-16s %-16s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
+        print("\n%-16s %-14s %-18s %-12s" % ("Borrowing ID", "Book Title", "Borrowing Date", "Deadline")) # Header
         # Print out borrowing info for unreturned books
         for borrowing in user_borrowings:
             bid = borrowing[0]
             title = borrowing[1]
             borrow_date = borrowing[2]
             deadline = borrowing[3]
-            print("%-16s %-16s %-16s %-16s" % (bid, title, borrow_date, deadline))
+            print("%-16s %-14s %-18s %-12s" % (bid, title, borrow_date, deadline))
 
         # Check if the return_id chosen by the user is valid
         print("\nPlease choose a book to return.")
@@ -188,15 +183,10 @@ def return_a_book(email):
                 return_id = input("Borrowing ID: ")
 
         # Enter today's date as return date in database
-        cursor.execute('UPDATE borrowings SET end_date = JULIANDAY("now") WHERE bid = ?', (return_id,))
+        today = date.today()
+        cursor.execute('UPDATE borrowings SET end_date = ? WHERE bid = ?', (today, return_id,))
 
         print("\nYour book is successfully returned!")
-
-        '''
-        
-        Do we want to add a section that tells the user that they returned a book late and a penalty was applied?
-        
-        '''
 
         # For overdue borrowings, apply penalty and update in database
         cursor.execute('SELECT start_date, end_date, JULIANDAY(end_date) - JULIANDAY(start_date) AS difference FROM borrowings WHERE bid = ?', (return_id,))
@@ -210,11 +200,11 @@ def return_a_book(email):
             review_option = input("\nInvalid input! Type either 'yes' or 'no': ")
 
         if review_option.lower() == "yes" or review_option.lower() == "y":
-            review_text = input("\nWhat is your review for this book? \n")
-            review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
-            while int(review_rating) < 1 or int(review_rating) > 5:
+            review_rating = float(input("\nWhat rating would you give this book? (1-5 inclusive) "))
+            while float(review_rating) < 1 or float(review_rating) > 5:
                 print("\nPlease enter a number between 1 to 5 inclusive.")
-                review_rating = input("\nWhat rating would you give this book? (1-5 inclusive) ")
+                review_rating = float(input("\nWhat rating would you give this book? (1-5 inclusive) "))
+            review_text = input("\nWhat is your review for this book? \n")
 
             # Find last rid number
             cursor.execute('SELECT rid FROM reviews ORDER BY rid DESC LIMIT 1')
@@ -226,9 +216,9 @@ def return_a_book(email):
             
             # Add user's review into review table
             review_query = '''
-                        INSERT INTO reviews VALUES(:rid, :book_id, :member, :rating, :rtext, JULIANDAY("now")) 
+                        INSERT INTO reviews VALUES(:rid, :book_id, :member, :rating, :rtext, :rdate) 
                         '''
-            cursor.execute(review_query, {"rid":last_rid[0] + 1, "book_id":book_id[0], "member":email, "rating":review_rating, "rtext":review_text})
+            cursor.execute(review_query, {"rid":last_rid[0] + 1, "book_id":book_id[0], "member":email, "rating":review_rating, "rtext":review_text, "rdate": today})
     
     connection.commit()
 
@@ -236,119 +226,112 @@ def search_a_book(email): #Search for a book
     global connection, cursor
 
     user_keyword = input("Enter a key word to search for: ").lower()
+    # Return books that match the name entered
     search_query = '''
-                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
+                    SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'), COUNT(bk.book_id),
                     CASE
                         WHEN NOT EXISTS (
                             SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id AND br.end_date IS NULL
                         ) THEN 'Available'
-                        ELSE 'Unavailable'
+                        ELSE 'On borrow'
                     END AS availability
                     FROM books bk
                     LEFT JOIN reviews r ON bk.book_id = r.book_id
                     LEFT JOIN borrowings br ON bk.book_id = br.book_id
                     WHERE LOWER(bk.title) LIKE '%' || ? || '%' OR LOWER(bk.author) LIKE '%' || ? || '%'
-                    GROUP BY bk.book_id
-                    ORDER BY bk.title ASC;
+                    GROUP BY bk.book_id, bk.title, bk.author, bk.pyear
+                    ORDER BY bk.title ASC, bk.author ASC
                 '''
-    cursor.execute(search_query, (user_keyword, user_keyword))
+                # LIMIT ? OFFSET ?
+    cursor.execute(search_query, (user_keyword, user_keyword,))
     matching_books = cursor.fetchall()
 
-    print("\nMatching Books:\n")
+    print(f"\n-------------- Matching Books --------------\n")
+    print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
     for book in matching_books:
-        book_id, title, author, pyear, rating, avail = book
-        print(f'{book_id} {title} {author} {pyear} {rating} {avail}')
-    
+        book_id = book[0]
+        title = book[1]
+        author = book[2]
+        pyear = book[3]
+        rating = book[4]
+        avail = book[6]
+        print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
+    print("\n")
+
+    ''' FOR BONUS
     if len(matching_books) == 0:
         print("No matching books.") #if there is no matching books will matching_books be 0 or NULL, check with others 
-        return 
-    
-    book_to_borrow = input("Enter the book ID of the book you wish to borrow: ").strip()
-
-    if len(book_to_borrow) > 0:
-        book_to_borrow = int(book_to_borrow)
-
+        return
+    elif len(matching_books) <= 5: # Only one page available to display
+        page = 1
+        print(f"\n-------------- Matching Books {page} --------------\n")
+        print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
         for book in matching_books:
-            if book[0] == book_to_borrow and book[5].lower() == 'Available':
-                #insert row into borrowings table and update book availability?
-                return
-            else:
+            book_id = book[0]
+            title = book[1]
+            author = book[2]
+            pyear = book[3]
+            rating = book[4]
+            avail = book[6]
+            print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
+        print("\n")
+    else: # More than one page available to display
+        books_already_displayed = 5
+        more_pages = input("\nWould you like to see more results? (Yes or No)\n")
+        while more_pages.lower() == "yes" or more_pages.lower() == "y":
+            books_already_displayed += 5
+            page += 1
+            offset = (page - 1) * 5
+            cursor.execute(search_query, (user_keyword, user_keyword, books_already_displayed,))
+            matching_books = cursor.fetchall()
+            print(f"\n-------------- Matching Books (Page {page}) --------------\n")
+            print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
+            for book in matching_books:
+                book_id = book[0]
+                title = book[1]
+                author = book[2]
+                pyear = book[3]
+                rating = book[4]
+                avail = book[6]
+                print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
+            print("\n")
+            more_pages = input("\nWould you like to see more results? (Yes or No)\n")
+    '''
+    user_choice = input("\nDo you want to borrow a book? (Yes/No) ")
+    while user_choice.lower() != "yes" and user_choice.lower() != "y" and user_choice.lower() != "no" and user_choice.lower() != "n":
+        print("\nPlease enter a valid input (Yes/No)")
+        user_choice = input("\nDo you want to borrow a book? (Yes/No) ")
+
+    if user_choice.lower() == "yes" or user_choice.lower() == "y":
+        # Execute the borrowing procedure
+        book_to_borrow = input("Enter the book ID of the book you wish to borrow: ").strip()
+
+        if len(book_to_borrow) > 0:
+            book_to_borrow = int(book_to_borrow)
+            condition = True
+
+            for book in matching_books:
+                if book[0] == book_to_borrow and book[6] == 'Available':
+                    condition = False
+                    bid_query = '''Select MAX(bid) from borrowings;'''
+                    cursor.execute(bid_query)
+                    max_bid = cursor.fetchone()
+                    today = date.today()
+                    borrowing_query = '''
+                        INSERT INTO borrowings (bid, member, book_id, start_date, end_date)
+                        VALUES (?, ?, ?, ?, NULL)'''
+                    
+                    cursor.execute(borrowing_query, (max_bid[0] + 1, email, book_to_borrow, today))
+                    print("The book has been sucessfully borrowed!")
+                    return
+            if condition: 
                 print("This book is not available for borrowing or invalid book ID is entered.")
 
-    #need to the five at a time thing that is part of bonus, iuc dunno how to do itttt
-    
-
-
-    # user_keyword = input("Enter a key word to search for: ").lower()#Main keyword we will use, would it be better if we pass this as a param? and ask for input in main for better flow idk
-    # title_query = '''
-    #                 SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
-    #                 CASE
-    #                     WHEN (br.end_date IS NULL OR EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id))
-    #                         AND NOT (br.end_date IS NULL AND EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id)) THEN 'Available'
-    #                     ELSE 'Unavialable'
-    #                 END
-    #                 FROM books bk
-    #                 LEFT JOIN reviews r ON bk.book_id = r.book_id
-    #                 LEFT JOIN borrowings br on bk.book_id = br.book_id
-    #                 WHERE bk.title LIKE '%'||?||'%' 
-    #                 GROUP BY bk.book_id
-    #                 ORDER BY bk.title ASC; 
-    #                 '''#How do we check if the book is available? When br.end_date IS NULL then 'Unavailable'
-    #                 #Never been borrowed
-    #                 #Already been returned - end_date is before current date
-    
-    # Case 
-    #                     When br.end_date IS NULL then 'unavailble'
-    #                     When exists (select 1
-    #                                 from borrowings br
-    #                                 where br.book_id = bk.book_id)
-    #                                 then 'Unavialble'
-    #                 Else 'Available' End
+    connection.commit()
   
-#BORROWING TABLE 
-# 1|arch@ualberta.ca|1|2023-11-15|
-# 2|arch@ualberta.ca|2|2023-11-15|
-# 3|siddh@ualberta.ca|3|2023-11-15|
-# 4|keya@ualberta.ca|4|2023-10-15|2023-10-25
-# 5|keya@ualberta.ca|5|2023-10-15|2023-10-25
-# 6|dhiya@ualberta.ca|6|2023-10-15|2023-11-25
-# 7|annoying@ualberta.ca|4|2023-10-15|2023-11-25
-# 8|dhanshri@ualberta.ca|5|2023-10-15|2023-10-25
-# 9|jpanchal@ualberta.ca|6|2023-11-15|
-# 10|asshah1@ualberta.ca|7|2023-11-15|
-    # cursor.execute(title_query, (user_keyword,)) 
-    # title_list = cursor.fetchall()
-    
-    # print("\nMatching Title List:") # print(title_list)
-    # for book in title_list:
-    #     book_id, title, author, pyear, rating, avail = book
-    #     print(f'{book_id} {title} {author} {pyear} {rating} {avail}')
-
-    # author_query = '''
-    #                 SELECT bk.book_id, bk.title, bk.author, bk.pyear, IFNULL(AVG(r.rating), 'No Rating'),
-    #                 CASE
-    #                     WHEN (br.end_date IS NULL OR EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id))
-    #                         AND NOT (br.end_date IS NULL AND EXISTS (SELECT 1 FROM borrowings br WHERE br.book_id = bk.book_id)) THEN 'Available'
-    #                     ELSE 'Unavialable'
-    #                 END
-    #                 FROM books bk
-    #                 LEFT JOIN reviews r ON bk.book_id = r.book_id
-    #                 LEFT JOIN borrowings br on bk.book_id = br.book_id
-    #                 WHERE bk.author LIKE '%'||?||'%'
-    #                 GROUP BY bk.book_id;
-    #                 '''
-    # cursor.execute(author_query, (user_keyword,)) 
-    # author_list = cursor.fetchall()
-    # print("\nMatching Author list:")
-    # for author in author_list:
-    #     book_id, title, author, pyear, rating, available= author
-    #     print(f'{book_id} {title} {author} {pyear} {rating} {available}')
-    # connection.commit()
-    # return
-
 def pay_a_penalty(email):
     '''
-    Displays users unpaid fees anf give them an option to pay partially or fully.
+    Displays users unpaid fees and give them an option to pay partially or fully.
     '''
     global connection, cursor
 
@@ -393,7 +376,7 @@ def pay_a_penalty(email):
         remaining_amount = chosen_penalty[1]
     else:
         remaining_amount = chosen_penalty[1] - chosen_penalty[2]
-    #print(remaining_amount)
+
     # User can partially or fully pay   
     payment = float(input("Enter amount you want to pay: "))
     if payment <= remaining_amount:
@@ -416,14 +399,13 @@ def main():
     connect(path)
 
     option_choosen = True
-    
     current_user = None 
     
     while option_choosen: 
         if current_user == None:
             user_option = input("\nDo you have an account? (Yes or No)\nIf you want to exit (exit): ")
 
-            if user_option.lower() == "exit":#exiting the code
+            if user_option.lower() == "exit": #exiting the code
                 break
 
             elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
