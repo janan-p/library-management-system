@@ -7,10 +7,27 @@ Group member names and ccids (3-4 members)
   dhanshri, Dhanshri Patel
 
 # Group work break-down strategy
-Please add
+Connection: Dhanshri
+Login Page: 
+- Sign up: Dhanshri
+- Login: Aayushi, Viral
+- Main Menu: Aayushi, Viral
+Member Profile: Aayushi
+Select a book: Aayushi, Janan, Dhanshri, Viral
+Return a book: Janan
+Pay a Penalty: Dhanshri, Viral
+Created Test Database: Janan, Dhanshri, Viral, Aayushi
 
 # Code execution guide
-Please add
+Running the code will first ask for the library database name.
+So provide it.
+Choose to sign up or login to your pre-existing account.
+Once logged in, the user can view the main menu with options to choose.
+  - Option 1: View member profile
+  - Option 2: View current borrowings, return a book, write an optional review
+  - Option 3: Search a book using a keyword and borrow out the desired book
+  - Option 4: View current penalties and partially/fully pay them
+Users can either log off or exit the program from the menu page.
 
 # Names of anyone you have collaborated with (as much as it is allowed within the course policy) or a line saying that you did not collaborate with anyone else.  
 No collaboration with anyone but members of the group.
