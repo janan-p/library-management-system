@@ -29,6 +29,7 @@ def signup():
         else:
             has_email = False 
     
+    #Account creation steps
     name = input("Name: ")
     byear = input("Birth Year: ")
     faculty = input("Faculty: ")
@@ -73,10 +74,12 @@ def login():
     else:
         print("\n Invalid email or password.")
         return False 
-    
-#-----------------------------------------------------------------------------------------------------
         
 def member_profile(email):
+    '''
+    Display the user's personal info, borrowings, returns, and penalties
+    '''
+    global connection, cursor
 
     cursor.execute('SELECT email, name, byear FROM members WHERE email=?', (email,))
     member_info = cursor.fetchone() 
@@ -140,6 +143,9 @@ def member_profile(email):
     print(f"Total debt on unpaid penalties: {user_total_debt} ")
 
 def return_a_book(email):
+    '''
+    Show user's current borrowings and execute a book returning procedure
+    '''
     global connection, cursor
 
     # Borrowing info for books that haven't been returned (including overdues)
@@ -222,7 +228,10 @@ def return_a_book(email):
     
     connection.commit()
 
-def search_a_book(email): #Search for a book
+def search_a_book(email):
+    '''
+    User can search for a book using a keyword and gets the option to check out a book if they like
+    '''
     global connection, cursor
 
     user_keyword = input("Enter a key word to search for: ").lower()
@@ -242,10 +251,10 @@ def search_a_book(email): #Search for a book
                     GROUP BY bk.book_id, bk.title, bk.author, bk.pyear
                     ORDER BY bk.title ASC, bk.author ASC
                 '''
-                # LIMIT ? OFFSET ?
     cursor.execute(search_query, (user_keyword, user_keyword,))
     matching_books = cursor.fetchall()
 
+    # Display search results
     print(f"\n-------------- Matching Books --------------\n")
     print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
     for book in matching_books:
@@ -258,58 +267,20 @@ def search_a_book(email): #Search for a book
         print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
     print("\n")
 
-    ''' FOR BONUS
-    if len(matching_books) == 0:
-        print("No matching books.") #if there is no matching books will matching_books be 0 or NULL, check with others 
-        return
-    elif len(matching_books) <= 5: # Only one page available to display
-        page = 1
-        print(f"\n-------------- Matching Books {page} --------------\n")
-        print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
-        for book in matching_books:
-            book_id = book[0]
-            title = book[1]
-            author = book[2]
-            pyear = book[3]
-            rating = book[4]
-            avail = book[6]
-            print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
-        print("\n")
-    else: # More than one page available to display
-        books_already_displayed = 5
-        more_pages = input("\nWould you like to see more results? (Yes or No)\n")
-        while more_pages.lower() == "yes" or more_pages.lower() == "y":
-            books_already_displayed += 5
-            page += 1
-            offset = (page - 1) * 5
-            cursor.execute(search_query, (user_keyword, user_keyword, books_already_displayed,))
-            matching_books = cursor.fetchall()
-            print(f"\n-------------- Matching Books (Page {page}) --------------\n")
-            print("%-12s %-14s %-14s %-19s %-10s %-16s" % ("Book ID", "Book Title", "Author", "Publishing Year", "Rating", "Availability")) # Header
-            for book in matching_books:
-                book_id = book[0]
-                title = book[1]
-                author = book[2]
-                pyear = book[3]
-                rating = book[4]
-                avail = book[6]
-                print('%-12s %-14s %-14s %-19s %-10s %-16s' % (book_id, title, author, pyear, rating, avail))
-            print("\n")
-            more_pages = input("\nWould you like to see more results? (Yes or No)\n")
-    '''
+    # Give user the option to borrow a book
     user_choice = input("\nDo you want to borrow a book? (Yes/No) ")
     while user_choice.lower() != "yes" and user_choice.lower() != "y" and user_choice.lower() != "no" and user_choice.lower() != "n":
         print("\nPlease enter a valid input (Yes/No)")
         user_choice = input("\nDo you want to borrow a book? (Yes/No) ")
 
+    # Execute the borrowing procedure if the user wants to borrow a book
     if user_choice.lower() == "yes" or user_choice.lower() == "y":
-        # Execute the borrowing procedure
         book_to_borrow = input("Enter the book ID of the book you wish to borrow: ").strip()
 
         if len(book_to_borrow) > 0:
             book_to_borrow = int(book_to_borrow)
+            
             condition = True
-
             for book in matching_books:
                 if book[0] == book_to_borrow and book[6] == 'Available':
                     condition = False
@@ -320,7 +291,6 @@ def search_a_book(email): #Search for a book
                     borrowing_query = '''
                         INSERT INTO borrowings (bid, member, book_id, start_date, end_date)
                         VALUES (?, ?, ?, ?, NULL)'''
-                    
                     cursor.execute(borrowing_query, (max_bid[0] + 1, email, book_to_borrow, today))
                     print("The book has been sucessfully borrowed!")
                     return
@@ -391,14 +361,15 @@ def pay_a_penalty(email):
         print("Payment exceeds the remaining amount. Payment not processed.")
         
     return
-#--------------------------------------------------------------------------------------------------------
+
 def main(): 
     global connection, cursor
+
     path = input("Enter the database file name: ")
     path = './' + path
     connect(path)
 
-    option_choosen = True
+    option_choosen = True 
     current_user = None 
     
     while option_choosen: 
@@ -407,34 +378,30 @@ def main():
 
             if user_option.lower() == "exit": #exiting the code
                 break
-
             elif user_option.lower() == "yes" or user_option.lower() == "y": #User already has account, then sign them in
                 login_success = login()
                 if login_success:
                     current_user = login_success  #return email from login() function
-                    
                 else:
                     print("Login unsuccessful. Try again or sign up.")
                     continue 
-            
             elif user_option.lower() == "no" or user_option.lower() == "n": #User does not have account, sign them up
                 signup_success = signup()
                 if signup_success:
-                    current_user = signup_success
+                    current_user = signup_success #return email from signup() function
             else:
                 print("\nInvalid input! Type either 'yes', 'no', or 'exit'.\n")
-                
         else: # there is already a user logged in
             print('\n----------------------------MENU---------------------------\n')
             print('Tasks Available:')
-            print('[1]       Member Profile')
-            print('[2]       Return a Book')
-            print('[3]       Search for Book')
-            print('[4]       Pay a Penalty')
-            print('[Exit]    To exit Menu')
-            print('[Log out] Log out of user')
+            print('[1]         Member Profile')
+            print('[2]         Return a Book')
+            print('[3]         Search for Book')
+            print('[4]         Pay a Penalty')
+            print('[Exit]      To exit Menu')
+            print('[Log out]   Log out of user')
             
-            user_task_choice = input('Choose a task (1,2,3,4,exit,log out): ')
+            user_task_choice = input('Choose a task (1, 2, 3, 4, exit, log out): ')
             
             if user_task_choice == '1': #user chose member profile
                 member_profile(current_user)
@@ -457,7 +424,7 @@ def main():
                 break 
                 
             else:
-                print('Invalid input! Please enter either (1,2,3,4,exit,log out)')
+                print('Invalid input! Please enter either (1, 2, 3, 4, exit, log out)')
              
     connection.commit()
     connection.close() 

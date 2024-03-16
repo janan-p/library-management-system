@@ -16,7 +16,10 @@ Member Profile: Aayushi
 Select a book: Aayushi, Janan, Dhanshri, Viral
 Return a book: Janan
 Pay a Penalty: Dhanshri, Viral
-Created Test Database: Janan, Dhanshri, Viral, Aayushi
+Created Test Database: Janan
+Updated Test Database: Janan, Dhanshri, Viral, Aayushi
+
+We regularily met as a group to discuss our progress, test what we have done so far, and brainstorm for edge cases.
 
 # Code execution guide
 Running the code will first ask for the library database name.
